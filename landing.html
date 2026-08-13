@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeTalk // Plataforma Cuántica de Comunicación y Código</title>
+  <meta name="description" content="Chatea, haz videollamadas y programa en tiempo real con tu equipo, todo en una sola plataforma.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="landing.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="landing-body">
+
+  <nav class="landing-nav">
+    <div class="logo-section">
+      <div class="logo-icon"><i data-lucide="zap"></i></div>
+      <span class="logo-text">CODETALK</span>
+    </div>
+    <a href="/app" class="cyber-btn landing-nav-cta">Entrar a la Red</a>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-badge"><i data-lucide="sparkles"></i> Plataforma cuántica de comunicación y código</div>
+    <h1 class="hero-title">Comunícate, llama y programa<br>en un solo lugar</h1>
+    <p class="hero-subtitle">
+      CodeTalk une chat de texto, videollamadas, un editor de código colaborativo y ejecución
+      de código en tiempo real dentro de servidores y canales organizados como el de tu equipo favorito.
+    </p>
+    <div class="hero-actions">
+      <a href="/app" class="join-btn hero-btn-primary">Entrar a la Red <i data-lucide="arrow-right"></i></a>
+      <a href="#features" class="secondary-join-btn hero-btn-secondary">Ver funciones</a>
+    </div>
+    <div class="hero-trust-row">
+      <span><i data-lucide="check"></i> Sin descargas, corre en el navegador</span>
+      <span><i data-lucide="check"></i> Acceso rápido como invitado</span>
+      <span><i data-lucide="check"></i> Guía de uso integrada</span>
+    </div>
+  </section>
+
+  <main>
+    <section id="features" class="features-section">
+      <div class="section-heading">
+        <span class="section-eyebrow">Funciones</span>
+        <h2>Todo lo que tu equipo necesita para colaborar</h2>
+        <p>Cada sección de CodeTalk está pensada para que sepas exactamente qué hace, sin adivinar.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="video"></i></div>
+          <h3>Videollamadas Cuánticas</h3>
+          <p>Micrófono, cámara y pantalla compartida con un panel de telemetría en vivo (latencia, ancho de banda) y controles claros para cada acción.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="terminal-square"></i></div>
+          <h3>Chat con Código Ejecutable</h3>
+          <p>Comparte fragmentos de código en el chat y ejecútalos al instante en Python, JavaScript, Java, C++ o C, con el resultado justo debajo del mensaje.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="code-2"></i></div>
+          <h3>Editor Colaborativo</h3>
+          <p>Un entorno de código multi-archivo para trabajar en equipo, con guardado directo y simulación de un compañero escribiendo en tiempo real.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="layout-grid"></i></div>
+          <h3>Servidores y Canales</h3>
+          <p>Organiza tus espacios en servidores con canales de texto, voz, video y código, cada uno claramente identificado y fácil de crear.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="wallet"></i></div>
+          <h3>Billetera Digital</h3>
+          <p>Saldo simulado para llamadas extendidas, con recargas vía una simulación de Binance Pay y un historial completo de transacciones.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="users"></i></div>
+          <h3>Amigos y Notificaciones</h3>
+          <p>Agrega personas por código único y recibe avisos del propio sistema —con el mismo diseño de la app— en vez de ventanas del navegador.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="how-section">
+      <div class="section-heading">
+        <span class="section-eyebrow">Primeros pasos</span>
+        <h2>Empezar toma menos de un minuto</h2>
+      </div>
+
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-step-number">1</div>
+          <h3>Entra a la red</h3>
+          <p>Inicia sesión, regístrate o usa la simulación rápida de invitado para explorar sin registrarte.</p>
+        </div>
+        <div class="how-step">
+          <div class="how-step-number">2</div>
+          <h3>Crea o únete a un servidor</h3>
+          <p>Estructura tu propio servidor cuántico o únete a uno con un código de invitación de un amigo.</p>
+        </div>
+        <div class="how-step">
+          <div class="how-step-number">3</div>
+          <h3>Colabora en tiempo real</h3>
+          <p>Chatea, llama, comparte y ejecuta código, y usa el botón de ayuda (?) para entender cada control.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section">
+      <h2>¿Listo para conectarte?</h2>
+      <p>Entra ahora mismo, la cuenta de demostración ya viene lista para probar.</p>
+      <a href="/app" class="join-btn hero-btn-primary">Entrar a la Red <i data-lucide="arrow-right"></i></a>
+    </section>
+  </main>
+
+  <footer class="landing-footer">
+    <div class="logo-section">
+      <div class="logo-icon logo-icon-small"><i data-lucide="zap"></i></div>
+      <span class="logo-text">CODETALK</span>
+    </div>
+    <p>Entorno simulado de comunicación y programación colaborativa.</p>
+  </footer>
+
+  <script>
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>
