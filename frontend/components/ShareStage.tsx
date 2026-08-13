@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Maximize, Minimize } from "lucide-react";
+import { Maximize, Minimize, Volume1, Volume2, VolumeX } from "lucide-react";
 import type { ShareStatsSnapshot } from "@/hooks/useVoiceCall";
 import StatsOverlay from "./StatsOverlay";
 import VideoSurface from "./VideoSurface";
@@ -16,6 +16,8 @@ export default function ShareStage({
   stream,
   ownerLabel,
   sampleStats,
+  volume = null,
+  onVolumeChange,
   children,
 }: {
   /** stream de la pantalla; null mientras llega el track (placeholder) */
@@ -23,9 +25,16 @@ export default function ShareStage({
   ownerLabel: string;
   /** muestreo de getStats() para el overlay; null = sin datos disponibles */
   sampleStats: (() => Promise<ShareStatsSnapshot | null>) | null;
+  /** volumen local 0..1 del audio del share; null oculta el control */
+  volume?: number | null;
+  onVolumeChange?: (v: number) => void;
   children: ReactNode;
 }) {
   const [showStats, setShowStats] = useState(false);
+  // último volumen distinto de cero, para restaurar al des-silenciar
+  const lastVolRef = useRef(1);
+  if (volume != null && volume > 0) lastVolRef.current = volume;
+  const VolIcon = volume === 0 ? VolumeX : volume != null && volume < 0.5 ? Volume1 : Volume2;
   const [fullscreen, setFullscreen] = useState(false);
   // fallback CSS ("modo teatro") si la API de fullscreen está bloqueada
   const [cssFullscreen, setCssFullscreen] = useState(false);
@@ -89,9 +98,42 @@ export default function ShareStage({
             </div>
           </div>
         )}
-        <span className="absolute top-2.5 left-2.5 bg-cyan px-2 py-[3px] font-mono text-[10px] font-semibold text-[#04121a]">
+        <span className="absolute top-2.5 left-2.5 flex items-center gap-1.5 bg-cyan px-2 py-[3px] font-mono text-[10px] font-semibold text-[#04121a]">
           {ownerLabel} · PANTALLA
+          {stream != null && stream.getAudioTracks().length > 0 && (
+            <Volume2 size={11} strokeWidth={2.5} />
+          )}
         </span>
+        {volume != null && onVolumeChange && (
+          <div
+            onDoubleClick={(e) => e.stopPropagation()}
+            className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-2 border border-line2 bg-bg/80 px-2.5 py-1.5 backdrop-blur-sm"
+          >
+            <button
+              onClick={() =>
+                onVolumeChange(volume === 0 ? lastVolRef.current : 0)
+              }
+              title={volume === 0 ? "Quitar silencio" : "Silenciar"}
+              className={`cursor-pointer ${
+                volume === 0 ? "text-red-hi" : "text-cyan"
+              }`}
+            >
+              <VolIcon size={13} strokeWidth={2} />
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(volume * 100)}
+              onChange={(e) => onVolumeChange(Number(e.target.value) / 100)}
+              title="Volumen del audio compartido (solo para ti)"
+              className="h-1 w-[90px] cursor-pointer accent-cyan"
+            />
+            <span className="w-7 text-right font-mono text-[9px] text-fg2">
+              {Math.round(volume * 100)}%
+            </span>
+          </div>
+        )}
         <button
           onClick={toggleFullscreen}
           title={

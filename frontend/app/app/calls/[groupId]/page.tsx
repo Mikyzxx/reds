@@ -46,6 +46,10 @@ export default function CallRoomPage({
     toggleCam,
     toggleShare,
     sampleShareStats,
+    shareVolume,
+    setShareVolume,
+    peerVolumes,
+    setPeerVolume,
   } = useVoiceCall(id);
 
   useEffect(() => {
@@ -113,6 +117,8 @@ export default function CallRoomPage({
             muted={p.muted}
             stream={p.camOn ? cameraStream : null}
             compact={shareActive}
+            volume={peerVolumes[p.userId] ?? 1}
+            onVolumeChange={(v) => setPeerVolume(p.userId, v)}
           />
         );
       })}
@@ -162,6 +168,12 @@ export default function CallRoomPage({
           stream={shareStream}
           ownerLabel={sharing ? "TÚ" : (sharingPeer?.displayName ?? "").toUpperCase()}
           sampleStats={shareTrack ? sampleStats : null}
+          volume={
+            !sharing && (shareStream?.getAudioTracks().length ?? 0) > 0
+              ? shareVolume
+              : null
+          }
+          onVolumeChange={setShareVolume}
         >
           {tiles}
         </ShareStage>

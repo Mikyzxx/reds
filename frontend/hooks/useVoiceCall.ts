@@ -62,10 +62,23 @@ export function useVoiceCall(groupId: number) {
   const [localCamStream, setLocalCamStream] = useState<MediaStream | null>(null);
   const [localScreenStream, setLocalScreenStream] =
     useState<MediaStream | null>(null);
+  // volumen local (solo de este espectador) del audio de pantalla remota
+  const [shareVolume, setShareVolumeState] = useState(1);
+  const shareVolumeRef = useRef(1);
+  // volumen local de la voz de cada peer (userId → 0..1)
+  const [peerVolumes, setPeerVolumesState] = useState<Record<number, number>>(
+    {},
+  );
+  const peerVolumesRef = useRef<Record<number, number>>({});
 
   const wsRef = useRef<WebSocket | null>(null);
   const entriesRef = useRef<Map<number, PeerEntry>>(new Map());
-  const audioElsRef = useRef<Map<number, HTMLAudioElement>>(new Map());
+  // un <audio> por stream (mic y audio de pantalla de un mismo peer conviven)
+  const audioElsRef = useRef<Map<number, Map<string, HTMLAudioElement>>>(
+    new Map(),
+  );
+  // shareStreamId anunciado por cada peer (accesible desde ontrack)
+  const shareIdsRef = useRef<Map<number, string | null>>(new Map());
   const analysersRef = useRef<Map<number | "self", AnalyserNode>>(new Map());
   const audioCtxRef = useRef<AudioContext | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
@@ -117,7 +130,7 @@ export function useVoiceCall(groupId: number) {
   }, []);
 
   /**
-   * Sube el techo del encoder para la pantalla: hasta 60fps y 8 Mbps,
+   * Sube el techo del encoder para la pantalla: hasta 60fps y 16 Mbps,
    * degradando resolución antes que fluidez si falta ancho de banda.
    */
   const boostScreenSenders = useCallback(() => {
@@ -132,7 +145,7 @@ export function useVoiceCall(groupId: number) {
             params.degradationPreference = "maintain-framerate";
             if (!params.encodings?.length) params.encodings = [{}];
             params.encodings[0].maxFramerate = 60;
-            params.encodings[0].maxBitrate = 8_000_000;
+            params.encodings[0].maxBitrate = 16_000_000;
             await sender.setParameters(params);
           } catch {
             /* navegadores viejos: se queda con los defaults */
@@ -194,15 +207,35 @@ export function useVoiceCall(groupId: number) {
       pc.ontrack = (e) => {
         const stream = e.streams[0] ?? new MediaStream([e.track]);
         if (e.track.kind === "audio") {
-          let audio = audioElsRef.current.get(peerId);
+          let els = audioElsRef.current.get(peerId);
+          if (!els) {
+            els = new Map();
+            audioElsRef.current.set(peerId, els);
+          }
+          let audio = els.get(stream.id);
           if (!audio) {
             audio = new Audio();
             audio.autoplay = true;
-            audioElsRef.current.set(peerId, audio);
+            els.set(stream.id, audio);
           }
           audio.srcObject = stream;
           audio.play().catch(() => {});
-          attachAnalyser(peerId, stream);
+          const isScreenAudio = stream.id === shareIdsRef.current.get(peerId);
+          if (isScreenAudio) {
+            audio.volume = shareVolumeRef.current;
+            // al dejar de compartir, el track termina: retirar su <audio>
+            e.track.onended = () => {
+              const el = audioElsRef.current.get(peerId)?.get(stream.id);
+              if (el) {
+                el.srcObject = null;
+                audioElsRef.current.get(peerId)?.delete(stream.id);
+              }
+            };
+          } else {
+            audio.volume = peerVolumesRef.current[peerId] ?? 1;
+            // solo la voz del mic alimenta el detector de "hablando"
+            attachAnalyser(peerId, stream);
+          }
           return;
         }
         // video (cámara o pantalla)
@@ -264,6 +297,7 @@ export function useVoiceCall(groupId: number) {
       switch (msg.type) {
         case "peers": {
           const infos = msg.peers as PeerInfo[];
+          infos.forEach((p) => shareIdsRef.current.set(p.userId, p.shareStreamId));
           setPeers(infos.map(asCallPeer));
           setStatus("connected");
           // crear la pc (con nuestros tracks) dispara onnegotiationneeded → offer
@@ -272,6 +306,7 @@ export function useVoiceCall(groupId: number) {
         }
         case "peer-joined": {
           const info = msg.peer as PeerInfo;
+          shareIdsRef.current.set(info.userId, info.shareStreamId);
           setPeers((prev) => [
             ...prev.filter((p) => p.userId !== info.userId),
             asCallPeer(info),
@@ -283,8 +318,12 @@ export function useVoiceCall(groupId: number) {
           const userId = msg.userId as number;
           entriesRef.current.get(userId)?.pc.close();
           entriesRef.current.delete(userId);
-          audioElsRef.current.get(userId)?.remove();
+          audioElsRef.current.get(userId)?.forEach((a) => {
+            a.srcObject = null;
+            a.remove();
+          });
           audioElsRef.current.delete(userId);
+          shareIdsRef.current.delete(userId);
           analysersRef.current.delete(userId);
           setPeers((prev) => prev.filter((p) => p.userId !== userId));
           break;
@@ -314,6 +353,7 @@ export function useVoiceCall(groupId: number) {
         case "peer-share": {
           const userId = msg.userId as number;
           const shareStreamId = (msg.shareStreamId as string | null) ?? null;
+          shareIdsRef.current.set(userId, shareStreamId);
           setPeers((prev) =>
             prev.map((p) => {
               if (p.userId !== userId) return p;
@@ -438,11 +478,14 @@ export function useVoiceCall(groupId: number) {
       wsRef.current = null;
       entriesRef.current.forEach((e) => e.pc.close());
       entriesRef.current.clear();
-      audioElsRef.current.forEach((a) => {
-        a.srcObject = null;
-        a.remove();
-      });
+      audioElsRef.current.forEach((els) =>
+        els.forEach((a) => {
+          a.srcObject = null;
+          a.remove();
+        }),
+      );
       audioElsRef.current.clear();
+      shareIdsRef.current.clear();
       analysersRef.current.clear();
       for (const ref of [micStreamRef, camStreamRef, screenStreamRef]) {
         ref.current?.getTracks().forEach((t) => t.stop());
@@ -471,6 +514,32 @@ export function useVoiceCall(groupId: number) {
     }, 220);
     return () => clearInterval(timer);
   }, [micOn, updatePeer]);
+
+  /** Ajusta (solo en local) el volumen del audio de pantalla compartida. */
+  const setShareVolume = useCallback((v: number) => {
+    const vol = Math.min(1, Math.max(0, v));
+    shareVolumeRef.current = vol;
+    setShareVolumeState(vol);
+    audioElsRef.current.forEach((els, peerId) => {
+      const shareId = shareIdsRef.current.get(peerId);
+      if (shareId) {
+        const el = els.get(shareId);
+        if (el) el.volume = vol;
+      }
+    });
+  }, []);
+
+  /** Ajusta (solo en local) el volumen de la voz de un peer concreto. */
+  const setPeerVolume = useCallback((userId: number, v: number) => {
+    const vol = Math.min(1, Math.max(0, v));
+    peerVolumesRef.current = { ...peerVolumesRef.current, [userId]: vol };
+    setPeerVolumesState(peerVolumesRef.current);
+    const els = audioElsRef.current.get(userId);
+    const shareId = shareIdsRef.current.get(userId);
+    els?.forEach((el, streamId) => {
+      if (streamId !== shareId) el.volume = vol;
+    });
+  }, []);
 
   const toggleMic = useCallback(() => {
     const stream = micStreamRef.current;
@@ -544,7 +613,16 @@ export function useVoiceCall(groupId: number) {
           width: { ideal: 2560 },
           height: { ideal: 1440 },
         },
-        audio: false,
+        // audio de la pestaña/sistema, crudo (sin filtros de voz que
+        // arruinen música); el navegador lo entrega solo si el usuario
+        // marca "compartir audio" en el diálogo
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+        // @ts-expect-error hint de Chrome 105+, ignorado por otros navegadores
+        systemAudio: "include",
       });
       screenStreamRef.current = stream;
       const track = stream.getVideoTracks()[0];
@@ -552,7 +630,9 @@ export function useVoiceCall(groupId: number) {
       track.contentHint = "motion";
       // el usuario puede cortar desde el propio chrome del navegador
       track.onended = stopShare;
-      entriesRef.current.forEach(({ pc }) => pc.addTrack(track, stream));
+      entriesRef.current.forEach(({ pc }) =>
+        stream.getTracks().forEach((t) => pc.addTrack(t, stream)),
+      );
       boostScreenSenders();
       setLocalScreenStream(stream);
       setSharing(true);
@@ -674,5 +754,9 @@ export function useVoiceCall(groupId: number) {
     toggleCam,
     toggleShare,
     sampleShareStats,
+    shareVolume,
+    setShareVolume,
+    peerVolumes,
+    setPeerVolume,
   };
 }
