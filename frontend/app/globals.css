@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0a0d12;
+  --color-panel: #0c1017;
+  --color-panel2: #0e131b;
+  --color-field: #0a0f15;
+  --color-line: #161d27;
+  --color-line2: #1c2530;
+  --color-cyan: #00e5ff;
+  --color-cyan-hi: #7df3ff;
+  --color-red: #ff2e63;
+  --color-red-hi: #ff5c85;
+  --color-purple: #b48bff;
+  --color-amber: #ffb300;
+  --color-green: #3ddc84;
+  --color-fg: #e2ebf2;
+  --color-fg2: #7d8b99;
+  --color-fg3: #4a5866;
+
+  --font-sans: var(--font-grotesk), sans-serif;
+  --font-mono: var(--font-jbmono), monospace;
+
+  --animate-nexapulse: nexapulse 2s infinite;
+
+  @keyframes nexapulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #1c2530;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* rejilla de fondo cyberpunk (login) */
+.nexa-grid-bg {
+  background-image: linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
