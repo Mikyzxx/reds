@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, clearToken, getToken, setToken } from "./api";
+import { api, apiUpload, clearToken, getToken, setToken } from "./api";
 import type { User } from "./types";
 
 const USER_KEY = "nexa_user";
+const USER_UPDATED_EVENT = "nexa:user-updated";
 
 export function getStoredUser(): User | null {
   if (typeof window === "undefined") return null;
@@ -15,6 +16,25 @@ export function getStoredUser(): User | null {
   } catch {
     return null;
   }
+}
+
+/** Persiste el usuario y avisa a cualquier useSession() montado (p. ej. el
+ * sidebar) para que refleje el cambio sin necesitar un reload. */
+export function updateStoredUser(user: User) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  window.dispatchEvent(new CustomEvent<User>(USER_UPDATED_EVENT, { detail: user }));
+}
+
+export async function uploadAvatar(file: File): Promise<User> {
+  const user = await apiUpload<User>("/api/users/me/avatar", file);
+  updateStoredUser(user);
+  return user;
+}
+
+export async function removeAvatar(): Promise<User> {
+  const user = await api<User>("/api/users/me/avatar", { method: "DELETE" });
+  updateStoredUser(user);
+  return user;
 }
 
 export async function login(email: string, password: string): Promise<User> {
@@ -75,6 +95,12 @@ export function useSession() {
         logout();
         window.location.href = "/login";
       });
+
+    const onUserUpdated = (e: Event) => {
+      setUser((e as CustomEvent<User>).detail);
+    };
+    window.addEventListener(USER_UPDATED_EVENT, onUserUpdated);
+    return () => window.removeEventListener(USER_UPDATED_EVENT, onUserUpdated);
   }, []);
 
   return { user, loading };

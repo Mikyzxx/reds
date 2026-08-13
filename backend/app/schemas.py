@@ -11,6 +11,7 @@ class UserOut(BaseModel):
     username: str
     display_name: str
     initials: str
+    avatar_url: str | None = None
 
 
 class LoginIn(BaseModel):

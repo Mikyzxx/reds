@@ -67,15 +67,29 @@ export default function AppLayout({
         </div>
 
         <div className="mt-auto flex items-center gap-2.5 border-t border-line px-5 pt-4">
-          <div className="flex h-8 w-8 flex-none items-center justify-center border border-cyan/30 bg-cyan/10 font-mono text-[11px] text-cyan">
-            {user.initials}
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-xs font-semibold">
-              {user.display_name}
+          <Link
+            href="/app/profile"
+            title="Ver perfil"
+            className="flex min-w-0 flex-1 items-center gap-2.5"
+          >
+            {user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.display_name}
+                className="h-8 w-8 flex-none border border-cyan/30 object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 flex-none items-center justify-center border border-cyan/30 bg-cyan/10 font-mono text-[11px] text-cyan">
+                {user.initials}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="truncate text-xs font-semibold">
+                {user.display_name}
+              </div>
+              <div className="font-mono text-[10px] text-fg3">en línea ●</div>
             </div>
-            <div className="font-mono text-[10px] text-fg3">en línea ●</div>
-          </div>
+          </Link>
           <button
             title="Cerrar sesión"
             onClick={() => {

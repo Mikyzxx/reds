@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { MicOff, Volume1, Volume2, VolumeX } from "lucide-react";
 import VideoSurface from "./VideoSurface";
 
@@ -11,6 +11,7 @@ export default function ParticipantTile({
   speaking,
   muted,
   stream = null,
+  avatarUrl = null,
   mirror = false,
   compact = false,
   volume = null,
@@ -21,14 +22,17 @@ export default function ParticipantTile({
   label?: string;
   speaking: boolean;
   muted: boolean;
-  /** stream de cámara; si es null se muestra el avatar de iniciales */
+  /** stream de cámara; si es null se muestra el avatar (foto o iniciales) */
   stream?: MediaStream | null;
+  /** foto de perfil; si es null (o falla al cargar) se muestran las iniciales */
+  avatarUrl?: string | null;
   mirror?: boolean;
   compact?: boolean;
   /** volumen local 0..1 de la voz de este peer; null oculta el control */
   volume?: number | null;
   onVolumeChange?: (v: number) => void;
 }) {
+  const [avatarFailed, setAvatarFailed] = useState(false);
   // último volumen distinto de cero, para restaurar al des-silenciar
   const lastVolRef = useRef(1);
   if (volume != null && volume > 0) lastVolRef.current = volume;
@@ -49,6 +53,13 @@ export default function ParticipantTile({
     >
       {stream ? (
         <VideoSurface stream={stream} mirror={mirror} />
+      ) : avatarUrl && !avatarFailed ? (
+        <img
+          src={avatarUrl}
+          alt={name}
+          onError={() => setAvatarFailed(true)}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       ) : (
         <div
           className={`flex items-center justify-center border border-cyan/30 bg-cyan/10 font-mono text-cyan ${

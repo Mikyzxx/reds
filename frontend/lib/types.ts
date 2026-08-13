@@ -4,6 +4,7 @@ export interface User {
   username: string;
   display_name: string;
   initials: string;
+  avatar_url: string | null;
 }
 
 export interface Group {
@@ -22,6 +23,7 @@ export interface PeerInfo {
   userId: number;
   displayName: string;
   initials: string;
+  avatarUrl: string | null;
   muted: boolean;
   camOn: boolean;
   shareStreamId: string | null;

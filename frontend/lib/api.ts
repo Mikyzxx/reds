@@ -56,3 +56,31 @@ export async function api<T>(
   if (res.status === 204) return undefined as T;
   return res.json();
 }
+
+/** Sube un archivo con multipart/form-data; no pasa por api() porque esta
+ * fuerza Content-Type: application/json (el boundary lo pone el navegador). */
+export async function apiUpload<T>(path: string, file: File): Promise<T> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const body = new FormData();
+  body.append("file", file);
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers,
+    body,
+  });
+  if (!res.ok) {
+    let detail = `Error ${res.status}`;
+    try {
+      const data = await res.json();
+      if (typeof data.detail === "string") detail = data.detail;
+    } catch {
+      /* respuesta sin cuerpo JSON */
+    }
+    throw new ApiError(res.status, detail);
+  }
+  return res.json();
+}

@@ -94,6 +94,7 @@ export default function CallRoomPage({
         speaking={selfSpeaking}
         muted={!micOn}
         stream={localCamStream}
+        avatarUrl={me?.avatar_url ?? null}
         mirror
         compact={shareActive}
       />
@@ -116,6 +117,7 @@ export default function CallRoomPage({
             speaking={p.speaking}
             muted={p.muted}
             stream={p.camOn ? cameraStream : null}
+            avatarUrl={p.avatarUrl}
             compact={shareActive}
             volume={peerVolumes[p.userId] ?? 1}
             onVolumeChange={(v) => setPeerVolume(p.userId, v)}

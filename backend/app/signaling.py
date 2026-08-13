@@ -24,6 +24,7 @@ class Participant:
     user_id: int
     display_name: str
     initials: str
+    avatar_url: str | None = None
     muted: bool = False
     cam_on: bool = False
     share_stream_id: str | None = None
@@ -33,6 +34,7 @@ class Participant:
             "userId": self.user_id,
             "displayName": self.display_name,
             "initials": self.initials,
+            "avatarUrl": self.avatar_url,
             "muted": self.muted,
             "camOn": self.cam_on,
             "shareStreamId": self.share_stream_id,
@@ -106,7 +108,11 @@ async def call_ws(ws: WebSocket, group_id: int, token: str = ""):
 
     await ws.accept()
     me = Participant(
-        ws=ws, user_id=user.id, display_name=user.display_name, initials=user.initials
+        ws=ws,
+        user_id=user.id,
+        display_name=user.display_name,
+        initials=user.initials,
+        avatar_url=user.avatar_url,
     )
     existing = room_manager.join(group_id, me)
 

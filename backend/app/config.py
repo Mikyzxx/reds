@@ -23,3 +23,7 @@ CORS_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+
+AVATAR_DIR = Path(__file__).resolve().parent.parent / "uploads" / "avatars"
+MAX_AVATAR_BYTES = 5 * 1024 * 1024
+ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}

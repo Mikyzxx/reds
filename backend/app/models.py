@@ -15,6 +15,7 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(128))
     initials: Mapped[str] = mapped_column(String(4))
     password_hash: Mapped[str] = mapped_column(String(255))
+    avatar_url: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     memberships: Mapped[list["GroupMember"]] = relationship(back_populates="user")
