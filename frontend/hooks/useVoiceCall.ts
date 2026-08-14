@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getToken, wsBase } from "@/lib/api";
 import { getStoredUser } from "@/lib/auth";
+import {
+  fetchMessages,
+  sendMessage,
+  type ChatAttachment,
+  type ChatMessage,
+} from "@/lib/chat";
 import type { PeerInfo } from "@/lib/types";
 
 const ICE_SERVERS: RTCConfiguration = {
@@ -109,10 +115,40 @@ export function useVoiceCall(groupId: number | null) {
   const closedRef = useRef(false);
   const myIdRef = useRef<number>(getStoredUser()?.id ?? 0);
 
+  // chat de sala
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatUnread, setChatUnread] = useState(0);
+  const chatOpenRef = useRef(false);
+
   const send = useCallback((msg: SignalMessage) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }, []);
+
+  /** Añade un mensaje (dedupe por id: el eco del POST puede cruzarse con el WS). */
+  const appendChatMessage = useCallback((msg: ChatMessage) => {
+    setChatMessages((prev) =>
+      prev.some((m) => m.id === msg.id) ? prev : [...prev, msg],
+    );
+    if (!chatOpenRef.current && msg.userId !== myIdRef.current) {
+      setChatUnread((n) => n + 1);
+    }
+  }, []);
+
+  /** El panel de chat avisa si está visible; abrirlo marca todo como leído. */
+  const setChatOpen = useCallback((open: boolean) => {
+    chatOpenRef.current = open;
+    if (open) setChatUnread(0);
+  }, []);
+
+  const sendChatMessage = useCallback(
+    async (body: string, attachment?: ChatAttachment) => {
+      if (groupId == null) return;
+      const msg = await sendMessage(groupId, body, attachment);
+      appendChatMessage(msg);
+    },
+    [groupId, appendChatMessage],
+  );
 
   const updatePeer = useCallback(
     (userId: number, patch: Partial<CallPeer>) => {
@@ -448,9 +484,13 @@ export function useVoiceCall(groupId: number | null) {
           }
           break;
         }
+        case "chat-message": {
+          appendChatMessage(msg.message as ChatMessage);
+          break;
+        }
       }
     },
-    [createEntry, send, updatePeer],
+    [createEntry, send, updatePeer, appendChatMessage],
   );
 
   // conexión: micrófono + websocket
@@ -494,6 +534,15 @@ export function useVoiceCall(groupId: number | null) {
       ws = new WebSocket(`${wsBase()}/ws/call/${groupId}?token=${token}`);
       wsRef.current = ws;
 
+      // historial del chat en paralelo a la conexión (≤50 mensajes)
+      fetchMessages(groupId)
+        .then((msgs) => {
+          if (!cancelled) setChatMessages(msgs);
+        })
+        .catch(() => {
+          /* el chat no bloquea la llamada */
+        });
+
       ws.onmessage = (e) => {
         try {
           handleMessage(JSON.parse(e.data));
@@ -507,9 +556,11 @@ export function useVoiceCall(groupId: number | null) {
           setError(
             e.code === 4401
               ? "Sesión expirada, vuelve a iniciar sesión"
-              : e.code === 4409
-                ? "Entraste a esta sala desde otra pestaña"
-                : "Conexión con el servidor perdida",
+              : e.code === 4403
+                ? "No eres miembro de este grupo"
+                : e.code === 4409
+                  ? "Entraste a esta sala desde otra pestaña"
+                  : "Conexión con el servidor perdida",
           );
         }
       };
@@ -555,6 +606,9 @@ export function useVoiceCall(groupId: number | null) {
       setLocalScreenStream(null);
       setPeerVolumesState({});
       peerVolumesRef.current = {};
+      setChatMessages([]);
+      setChatUnread(0);
+      chatOpenRef.current = false;
     };
   }, [groupId, attachAnalyser, handleMessage]);
 
@@ -839,5 +893,9 @@ export function useVoiceCall(groupId: number | null) {
     setShareVolume,
     peerVolumes,
     setPeerVolume,
+    chatMessages,
+    chatUnread,
+    sendChatMessage,
+    setChatOpen,
   };
 }

@@ -52,3 +52,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 AVATAR_DIR = Path(__file__).resolve().parent.parent / "uploads" / "avatars"
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
 ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+# Adjuntos del chat de sala (cualquier tipo, nombre uuid no adivinable)
+CHAT_DIR = Path(__file__).resolve().parent.parent / "uploads" / "chat"
+MAX_CHAT_FILE_BYTES = 20 * 1024 * 1024

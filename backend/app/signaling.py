@@ -96,8 +96,18 @@ async def call_ws(ws: WebSocket, group_id: int, token: str = ""):
 
     with SessionLocal() as db:
         user = db.get(models.User, user_id)
+        is_member = (
+            None
+            if user is None
+            else db.query(models.GroupMember)
+            .filter_by(group_id=group_id, user_id=user_id)
+            .first()
+        )
     if user is None:
         await ws.close(code=4401)
+        return
+    if is_member is None:
+        await ws.close(code=4403)
         return
 
     # una sola conexión por usuario y sala

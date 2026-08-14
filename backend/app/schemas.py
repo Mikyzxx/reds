@@ -131,6 +131,43 @@ class GroupOut(BaseModel):
     active_call_count: int = 0
 
 
+# --- Chat de sala ---
+
+
+class ChatAttachmentIn(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    url: str = Field(min_length=1, max_length=255)
+    size: int = Field(ge=0, le=20 * 1024 * 1024)
+    mime: str = Field(min_length=1, max_length=128)
+
+
+class ChatMessageIn(BaseModel):
+    body: str = Field(default="", max_length=2000)
+    attachment: ChatAttachmentIn | None = None
+
+
+class ChatMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    group_id: int
+    user_id: int
+    body: str
+    attachment_name: str | None = None
+    attachment_url: str | None = None
+    attachment_size: int | None = None
+    attachment_mime: str | None = None
+    created_at: datetime
+    user: UserOut
+
+
+class ChatUploadOut(BaseModel):
+    name: str
+    url: str
+    size: int
+    mime: str
+
+
 # Columnas del kanban y prioridades; el frontend usa estos mismos literales.
 TASK_STATUSES = ("pendiente", "en_progreso", "en_prueba", "terminado")
 TASK_PRIORITIES = ("alta", "media", "baja")

@@ -56,6 +56,9 @@ class Group(Base):
     tasks: Mapped[list["Task"]] = relationship(
         back_populates="group", cascade="all, delete-orphan"
     )
+    chat_messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="group", cascade="all, delete-orphan"
+    )
 
 
 class GroupMember(Base):
@@ -97,3 +100,24 @@ class Task(Base):
 
     group: Mapped[Group] = relationship(back_populates="tasks")
     assignee: Mapped[User | None] = relationship(foreign_keys=[assignee_id])
+
+
+class ChatMessage(Base):
+    """Mensaje del chat de sala; un adjunto opcional embebido por mensaje."""
+
+    __tablename__ = "chat_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey("groups_.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    body: Mapped[str] = mapped_column(String(2000), default="")
+    attachment_name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    attachment_url: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    attachment_size: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    attachment_mime: Mapped[str | None] = mapped_column(String(128), nullable=True, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    group: Mapped[Group] = relationship(back_populates="chat_messages")
+    user: Mapped[User] = relationship()
