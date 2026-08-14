@@ -95,6 +95,17 @@ export function useVoiceCall(groupId: number | null) {
   const micStreamRef = useRef<MediaStream | null>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
+  // Contenedores estables para el msid saliente: el stream asociado a un
+  // transceiver se fija al crearlo y replaceTrack() NO lo cambia, así que el
+  // id que ve el receptor es el de estos y no el de getDisplayMedia/getUserMedia.
+  // Por eso "share-start" anuncia screenOut().id (ver toggleShare).
+  const camOutRef = useRef<MediaStream | null>(null);
+  const screenOutRef = useRef<MediaStream | null>(null);
+  const camOut = useCallback(() => (camOutRef.current ??= new MediaStream()), []);
+  const screenOut = useCallback(
+    () => (screenOutRef.current ??= new MediaStream()),
+    [],
+  );
   const closedRef = useRef(false);
   const myIdRef = useRef<number>(getStoredUser()?.id ?? 0);
 
@@ -172,29 +183,26 @@ export function useVoiceCall(groupId: number | null) {
           })
         : pc.addTransceiver("audio", { direction: "recvonly" });
 
+      // Los transceivers de cámara/pantalla se asocian SIEMPRE al contenedor
+      // estable (camOut/screenOut), tanto si ya hay track como si no: así el
+      // msid que recibe el peer coincide con el id anunciado por señalización.
       const camTrack = camStreamRef.current?.getVideoTracks()[0] ?? null;
-      const camTx = camTrack
-        ? pc.addTransceiver(camTrack, {
-            direction: "sendrecv",
-            streams: [camStreamRef.current!],
-          })
-        : pc.addTransceiver("video", { direction: "recvonly" });
+      const camTx = pc.addTransceiver(camTrack ?? "video", {
+        direction: camTrack ? "sendrecv" : "recvonly",
+        streams: [camOut()],
+      });
 
       const screenVideoTrack = screenStreamRef.current?.getVideoTracks()[0] ?? null;
-      const screenVideoTx = screenVideoTrack
-        ? pc.addTransceiver(screenVideoTrack, {
-            direction: "sendrecv",
-            streams: [screenStreamRef.current!],
-          })
-        : pc.addTransceiver("video", { direction: "recvonly" });
+      const screenVideoTx = pc.addTransceiver(screenVideoTrack ?? "video", {
+        direction: screenVideoTrack ? "sendrecv" : "recvonly",
+        streams: [screenOut()],
+      });
 
       const screenAudioTrack = screenStreamRef.current?.getAudioTracks()[0] ?? null;
-      const screenAudioTx = screenAudioTrack
-        ? pc.addTransceiver(screenAudioTrack, {
-            direction: "sendrecv",
-            streams: [screenStreamRef.current!],
-          })
-        : pc.addTransceiver("audio", { direction: "recvonly" });
+      const screenAudioTx = pc.addTransceiver(screenAudioTrack ?? "audio", {
+        direction: screenAudioTrack ? "sendrecv" : "recvonly",
+        streams: [screenOut()],
+      });
 
       const entry: PeerEntry = {
         pc,
@@ -314,7 +322,7 @@ export function useVoiceCall(groupId: number | null) {
 
       return entry;
     },
-    [attachAnalyser, boostScreenSenders, send, updatePeer],
+    [attachAnalyser, boostScreenSenders, camOut, screenOut, send, updatePeer],
   );
 
   const asCallPeer = (info: PeerInfo): CallPeer => ({
@@ -636,6 +644,7 @@ export function useVoiceCall(groupId: number | null) {
       };
       entriesRef.current.forEach(({ camTx }) => {
         camTx.sender.replaceTrack(track);
+        camTx.sender.setStreams?.(camOut());
         camTx.direction = "sendrecv";
       });
       setLocalCamStream(stream);
@@ -644,7 +653,7 @@ export function useVoiceCall(groupId: number | null) {
     } catch {
       setError("No se pudo acceder a la cámara. Revisa permisos.");
     }
-  }, [camOn, send]);
+  }, [camOn, send, camOut]);
 
   const stopShare = useCallback(() => {
     screenStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -693,20 +702,26 @@ export function useVoiceCall(groupId: number | null) {
 
       entriesRef.current.forEach(({ screenVideoTx, screenAudioTx }) => {
         screenVideoTx.sender.replaceTrack(videoTrack);
+        // reafirma el msid: en algunos navegadores la asociación de
+        // addTransceiver no sobrevive a un sender que estuvo sin track
+        screenVideoTx.sender.setStreams?.(screenOut());
         screenVideoTx.direction = "sendrecv";
         if (audioTrack) {
           screenAudioTx.sender.replaceTrack(audioTrack);
+          screenAudioTx.sender.setStreams?.(screenOut());
           screenAudioTx.direction = "sendrecv";
         }
       });
       boostScreenSenders();
       setLocalScreenStream(stream);
       setSharing(true);
-      send({ type: "share-start", streamId: stream.id });
+      // el id anunciado es el del contenedor estable, que es el msid que
+      // realmente viaja en el SDP (no el del stream de getDisplayMedia)
+      send({ type: "share-start", streamId: screenOut().id });
     } catch {
       /* usuario canceló el diálogo de compartir */
     }
-  }, [sharing, stopShare, send, boostScreenSenders]);
+  }, [sharing, stopShare, send, boostScreenSenders, screenOut]);
 
   const sampleShareStats = useCallback(
     async (
