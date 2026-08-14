@@ -9,5 +9,5 @@ export default function Home() {
   useEffect(() => {
     router.replace(getToken() ? "/app/calls" : "/login");
   }, [router]);
-  return null;
+  return null;  
 }
