@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, MicOff, PhoneOff } from "lucide-react";
+import { MessageSquare, Mic, MicOff, PhoneOff } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallSession } from "@/contexts/CallContext";
@@ -9,7 +9,7 @@ import { useCallSession } from "@/contexts/CallContext";
  * navega por otra sección; se oculta en la propia sala de llamada. */
 export default function ActiveCallBar() {
   const pathname = usePathname();
-  const { activeGroupId, status, peers, micOn, toggleMic, leaveCall } =
+  const { activeGroupId, status, peers, micOn, toggleMic, leaveCall, chatUnread } =
     useCallSession();
 
   if (activeGroupId == null) return null;
@@ -29,6 +29,12 @@ export default function ActiveCallBar() {
       <span className="font-mono text-[11px] text-fg2">
         EN LLAMADA · {total} participante{total === 1 ? "" : "s"}
       </span>
+      {chatUnread > 0 && (
+        <span className="flex items-center gap-1 bg-cyan px-1.5 py-px font-mono text-[9px] font-semibold text-[#04121a]">
+          <MessageSquare size={10} strokeWidth={2.5} />
+          {chatUnread}
+        </span>
+      )}
       <button
         onClick={toggleMic}
         title={micOn ? "Silenciar" : "Activar micrófono"}
