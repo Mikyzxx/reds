@@ -31,9 +31,14 @@ if DATABASE_URL.startswith("postgresql://"):
 elif DATABASE_URL.startswith("mysql://"):
     DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
 
+# Lista separada por comas; sobreescribible con la env CORS_ORIGINS
 CORS_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    o.strip()
+    for o in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,https://reds-chi.vercel.app",
+    ).split(",")
+    if o.strip()
 ]
 
 AVATAR_DIR = Path(__file__).resolve().parent.parent / "uploads" / "avatars"

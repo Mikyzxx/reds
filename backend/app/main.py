@@ -28,7 +28,7 @@ app = FastAPI(title="NEXA API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_origin_regex=r"https://.*\.ngrok(-free)?\.(app|dev|io)",
+    allow_origin_regex=r"https://.*\.(ngrok(-free)?\.(app|dev|io)|vercel\.app)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
