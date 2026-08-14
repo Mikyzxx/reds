@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -34,6 +34,9 @@ class Group(Base):
     members: Mapped[list["GroupMember"]] = relationship(
         back_populates="group", cascade="all, delete-orphan"
     )
+    tasks: Mapped[list["Task"]] = relationship(
+        back_populates="group", cascade="all, delete-orphan"
+    )
 
 
 class GroupMember(Base):
@@ -47,3 +50,31 @@ class GroupMember(Base):
 
     group: Mapped[Group] = relationship(back_populates="members")
     user: Mapped[User] = relationship(back_populates="memberships")
+
+
+class Task(Base):
+    """Tarjeta del planner kanban. `position` ordena dentro de su columna
+    (`status`) y el router la renumera 0..n-1 en cada movimiento."""
+
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey("groups_.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(String(1000), default="")
+    status: Mapped[str] = mapped_column(String(16), default="pendiente", index=True)
+    priority: Mapped[str] = mapped_column(String(8), default="media")
+    assignee_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, default=None
+    )
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    group: Mapped[Group] = relationship(back_populates="tasks")
+    assignee: Mapped[User | None] = relationship(foreign_keys=[assignee_id])

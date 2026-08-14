@@ -1,6 +1,6 @@
 # NEXA — Planner · Llamadas · IDE
 
-App de trabajo en equipo con estética minimalista cyberpunk. **Fase 1**: login demo, usuarios, grupos (salas) y llamadas de voz por WebRTC.
+App de trabajo en equipo con estética minimalista cyberpunk. **Fase 1**: login demo, usuarios, grupos (salas), llamadas de voz por WebRTC y planner kanban por grupo.
 
 ## Stack
 
@@ -70,10 +70,14 @@ Comparte la URL `https://xxxx.ngrok-free.app` — sirve la app, la API y la señ
 ## Estructura
 
 ```
-backend/   FastAPI: auth JWT, usuarios, grupos, señalización WebRTC (WS /ws/call/{group_id})
-frontend/  Next.js: login, shell con sidebar, salas de llamada, hook useVoiceCall (WebRTC)
+backend/   FastAPI: auth JWT, usuarios, grupos, tareas del planner, señalización WebRTC (WS /ws/call/{group_id})
+frontend/  Next.js: login, shell con sidebar, salas de llamada, planner kanban, hook useVoiceCall (WebRTC)
 ```
+
+## Planner
+
+Tablero kanban **por grupo**: cada sala tiene su propio tablero y solo sus miembros lo ven y editan. Las tarjetas llevan título, descripción, prioridad (alta/media/baja) y usuario asignado, y se arrastran entre las cuatro columnas — **Pendiente · En progreso · En prueba · Terminado** — con el orden persistido en la tabla `tasks` (`GET/POST /api/tasks`, `PATCH /api/tasks/{id}`, `PATCH /api/tasks/{id}/move`, `DELETE /api/tasks/{id}`).
 
 ## Fase 2 (pendiente)
 
-Planner kanban, calendario semanal, videollamada + compartir pantalla, chat de sala, IDE multi-lenguaje.
+Calendario semanal, videollamada + compartir pantalla, chat de sala, IDE multi-lenguaje.

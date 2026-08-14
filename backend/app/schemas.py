@@ -48,3 +48,46 @@ class GroupOut(BaseModel):
     members: list[UserOut] = []
     is_member: bool = False
     active_call_count: int = 0
+
+
+# Columnas del kanban y prioridades; el frontend usa estos mismos literales.
+TASK_STATUSES = ("pendiente", "en_progreso", "en_prueba", "terminado")
+TASK_PRIORITIES = ("alta", "media", "baja")
+
+
+class TaskIn(BaseModel):
+    group_id: int
+    title: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=1000)
+    status: str = "pendiente"
+    priority: str = "media"
+    assignee_id: int | None = None
+
+
+class TaskUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=1000)
+    priority: str | None = None
+    assignee_id: int | None = None
+
+
+class TaskMove(BaseModel):
+    status: str
+    position: int = 0
+
+
+class TaskOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    group_id: int
+    title: str
+    description: str
+    status: str
+    priority: str
+    assignee_id: int | None = None
+    assignee: UserOut | None = None
+    created_by: int
+    position: int
+    created_at: datetime
+    updated_at: datetime

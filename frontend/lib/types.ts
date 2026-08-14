@@ -19,6 +19,29 @@ export interface Group {
   active_call_count: number;
 }
 
+export type TaskStatus =
+  | "pendiente"
+  | "en_progreso"
+  | "en_prueba"
+  | "terminado";
+
+export type TaskPriority = "alta" | "media" | "baja";
+
+export interface Task {
+  id: number;
+  group_id: number;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignee_id: number | null;
+  assignee: User | null;
+  created_by: number;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PeerInfo {
   userId: number;
   displayName: string;
