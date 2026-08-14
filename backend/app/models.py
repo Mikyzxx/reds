@@ -1,6 +1,14 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import (
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -90,6 +98,8 @@ class Task(Base):
     )
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
     position: Mapped[int] = mapped_column(Integer, default=0)
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

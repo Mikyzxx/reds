@@ -2,14 +2,14 @@
 
 import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, SquareKanban, UsersRound } from "lucide-react";
+import { Plus, SquareKanban } from "lucide-react";
+import GroupChips from "@/components/GroupChips";
 import TaskCard from "@/components/TaskCard";
 import TaskForm, { TaskFormValues } from "@/components/TaskForm";
+import { useGroups } from "@/hooks/useGroups";
 import { api } from "@/lib/api";
 import { COLUMNS, STATUSES } from "@/lib/planner";
-import type { Group, Task, TaskStatus } from "@/lib/types";
-
-const GROUP_KEY = "nexa_planner_group";
+import type { Task, TaskStatus } from "@/lib/types";
 
 /** Reordena en local igual que lo hará el backend: saca la tarea, la inserta
  * en `target` dentro de su columna nueva y renumera todas las posiciones. */
@@ -39,14 +39,20 @@ function moveLocal(
 }
 
 export default function PlannerPage() {
-  const [groups, setGroups] = useState<Group[] | null>(null);
-  const [groupId, setGroupId] = useState<number | null>(null);
+  const {
+    groups,
+    groupId,
+    members,
+    selectGroup: pickGroup,
+    error: groupsError,
+  } = useGroups();
   // El tablero recuerda de qué grupo son sus tareas: al cambiar de grupo la
   // vista vuelve sola a "cargando…" sin resetear estado desde un efecto.
   const [board, setBoard] = useState<{ groupId: number; items: Task[] } | null>(
     null,
   );
-  const [error, setError] = useState<string | null>(null);
+  const [taskError, setTaskError] = useState<string | null>(null);
+  const error = taskError ?? groupsError;
 
   const [creatingIn, setCreatingIn] = useState<TaskStatus | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -57,8 +63,6 @@ export default function PlannerPage() {
   } | null>(null);
   const dragIdRef = useRef<number | null>(null);
 
-  const group = groups?.find((g) => g.id === groupId) ?? null;
-  const members = group?.members ?? [];
   const tasks = board && board.groupId === groupId ? board.items : null;
   const busy =
     draggingId !== null || editingId !== null || creatingIn !== null;
@@ -76,24 +80,11 @@ export default function PlannerPage() {
     [],
   );
 
-  // Grupos donde el usuario es miembro; recuerda el último elegido.
-  useEffect(() => {
-    api<Group[]>("/api/groups")
-      .then((all) => {
-        const mine = all.filter((g) => g.is_member);
-        setGroups(mine);
-        const stored = Number(localStorage.getItem(GROUP_KEY));
-        const initial = mine.find((g) => g.id === stored) ?? mine[0];
-        if (initial) setGroupId(initial.id);
-      })
-      .catch((e) => setError(e.message));
-  }, []);
-
   const load = useCallback(() => {
     if (groupId === null) return;
     api<Task[]>(`/api/tasks?group_id=${groupId}`)
       .then((items) => setBoard({ groupId, items }))
-      .catch((e) => setError(e.message));
+      .catch((e) => setTaskError(e.message));
   }, [groupId]);
 
   useEffect(() => {
@@ -109,14 +100,13 @@ export default function PlannerPage() {
   }, [busy, groupId, load]);
 
   function selectGroup(id: number) {
-    setGroupId(id);
-    localStorage.setItem(GROUP_KEY, String(id));
+    pickGroup(id);
     setCreatingIn(null);
     setEditingId(null);
   }
 
   function fail(e: unknown, fallback: string) {
-    setError(e instanceof Error ? e.message : fallback);
+    setTaskError(e instanceof Error ? e.message : fallback);
     load();
   }
 
@@ -129,7 +119,7 @@ export default function PlannerPage() {
       });
       setTasks((prev) => [...prev, task]);
       setCreatingIn(null);
-      setError(null);
+      setTaskError(null);
     } catch (e) {
       fail(e, "No se pudo crear la tarea");
     }
@@ -143,7 +133,7 @@ export default function PlannerPage() {
       });
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setEditingId(null);
-      setError(null);
+      setTaskError(null);
     } catch (e) {
       fail(e, "No se pudo guardar la tarea");
     }
@@ -191,7 +181,7 @@ export default function PlannerPage() {
         method: "PATCH",
         body: JSON.stringify({ status, position: target }),
       });
-      setError(null);
+      setTaskError(null);
     } catch (e) {
       setTasks(current);
       fail(e, "No se pudo mover la tarea");
@@ -243,23 +233,7 @@ export default function PlannerPage() {
           </div>
         </div>
 
-        <div className="ml-auto flex max-w-[50%] items-center gap-1.5 overflow-x-auto">
-          {groups?.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => selectGroup(g.id)}
-              title={`${g.members.length} miembros`}
-              className={`flex flex-none cursor-pointer items-center gap-1.5 border px-3 py-2 font-mono text-[11px] tracking-wide ${
-                g.id === groupId
-                  ? "border-cyan/40 bg-cyan/10 text-cyan"
-                  : "border-line2 text-fg2 hover:text-fg"
-              }`}
-            >
-              <UsersRound size={11} strokeWidth={1.75} />
-              {g.name}
-            </button>
-          ))}
-        </div>
+        <GroupChips groups={groups} groupId={groupId} onSelect={selectGroup} />
 
         <button
           onClick={() =>

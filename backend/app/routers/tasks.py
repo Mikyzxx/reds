@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -42,6 +44,14 @@ def _validate_priority(value: str) -> str:
     if value not in schemas.TASK_PRIORITIES:
         raise HTTPException(status_code=422, detail=f"Prioridad inválida: {value}")
     return value
+
+
+def _validate_range(start: date | None, end: date | None) -> None:
+    if start is not None and end is not None and end < start:
+        raise HTTPException(
+            status_code=422,
+            detail="La fecha de fin no puede ser anterior a la de inicio",
+        )
 
 
 def _validate_assignee(db: Session, group_id: int, assignee_id: int | None) -> None:
@@ -97,6 +107,7 @@ def create_task(
     _validate_status(body.status)
     _validate_priority(body.priority)
     _validate_assignee(db, body.group_id, body.assignee_id)
+    _validate_range(body.start_date, body.end_date)
 
     task = models.Task(
         group_id=body.group_id,
@@ -107,6 +118,8 @@ def create_task(
         assignee_id=body.assignee_id,
         created_by=current.id,
         position=len(_column(db, body.group_id, body.status)),
+        start_date=body.start_date,
+        end_date=body.end_date,
     )
     db.add(task)
     db.commit()
@@ -136,6 +149,13 @@ def update_task(
     if "assignee_id" in data:
         _validate_assignee(db, task.group_id, data["assignee_id"])
         task.assignee_id = data["assignee_id"]
+    if "start_date" in data or "end_date" in data:
+        # el rango se valida ya mezclado con lo que la tarea tenía guardado
+        start = data.get("start_date", task.start_date)
+        end = data.get("end_date", task.end_date)
+        _validate_range(start, end)
+        task.start_date = start
+        task.end_date = end
 
     db.commit()
     db.refresh(task)

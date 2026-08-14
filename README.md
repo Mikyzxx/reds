@@ -76,8 +76,14 @@ frontend/  Next.js: login, shell con sidebar, salas de llamada, planner kanban, 
 
 ## Planner
 
-Tablero kanban **por grupo**: cada sala tiene su propio tablero y solo sus miembros lo ven y editan. Las tarjetas llevan título, descripción, prioridad (alta/media/baja) y usuario asignado, y se arrastran entre las cuatro columnas — **Pendiente · En progreso · En prueba · Terminado** — con el orden persistido en la tabla `tasks` (`GET/POST /api/tasks`, `PATCH /api/tasks/{id}`, `PATCH /api/tasks/{id}/move`, `DELETE /api/tasks/{id}`).
+Tablero kanban **por grupo**: cada sala tiene su propio tablero y solo sus miembros lo ven y editan. Las tarjetas llevan título, descripción, prioridad (alta/media/baja), usuario asignado y **fechas de inicio y fin** (opcionales), y se arrastran entre las cuatro columnas — **Pendiente · En progreso · En prueba · Terminado** — con el orden persistido en la tabla `tasks` (`GET/POST /api/tasks`, `PATCH /api/tasks/{id}`, `PATCH /api/tasks/{id}/move`, `DELETE /api/tasks/{id}`).
+
+## Calendario
+
+Vista mensual de las tareas del mismo grupo que el planner: cada tarea se dibuja como una barra continua de su fecha de inicio a la de fin, con el color de su columna del kanban, y las que cruzan semanas o meses se parten en tramos. Al hacer clic en una barra se abre un panel de detalle donde se editan las dos fechas; las tareas sin fechas aparecen en la tira *sin programar* del pie.
+
+> Las columnas `start_date` / `end_date` se añaden solas al arrancar el backend (ver `backend/app/migrate.py`): `create_all` no altera tablas ya creadas y el proyecto no usa Alembic.
 
 ## Fase 2 (pendiente)
 
-Calendario semanal, videollamada + compartir pantalla, chat de sala, IDE multi-lenguaje.
+Videollamada + compartir pantalla, chat de sala, IDE multi-lenguaje.

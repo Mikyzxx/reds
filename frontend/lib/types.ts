@@ -38,6 +38,9 @@ export interface Task {
   assignee: User | null;
   created_by: number;
   position: number;
+  /** ISO `YYYY-MM-DD`, opcionales */
+  start_date: string | null;
+  end_date: string | null;
   created_at: string;
   updated_at: string;
 }

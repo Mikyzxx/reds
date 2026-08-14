@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -143,6 +143,8 @@ class TaskIn(BaseModel):
     status: str = "pendiente"
     priority: str = "media"
     assignee_id: int | None = None
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -150,6 +152,8 @@ class TaskUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=1000)
     priority: str | None = None
     assignee_id: int | None = None
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 class TaskMove(BaseModel):
@@ -170,5 +174,7 @@ class TaskOut(BaseModel):
     assignee: UserOut | None = None
     created_by: int
     position: int
+    start_date: date | None = None
+    end_date: date | None = None
     created_at: datetime
     updated_at: datetime

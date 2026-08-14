@@ -9,6 +9,8 @@ export interface TaskFormValues {
   description: string;
   priority: TaskPriority;
   assignee_id: number | null;
+  start_date: string | null;
+  end_date: string | null;
 }
 
 const INPUT =
@@ -36,11 +38,15 @@ export default function TaskForm({
   const [assigneeId, setAssigneeId] = useState<number | null>(
     initial?.assignee_id ?? null,
   );
+  const [startDate, setStartDate] = useState(initial?.start_date ?? "");
+  const [endDate, setEndDate] = useState(initial?.end_date ?? "");
   const [saving, setSaving] = useState(false);
+
+  const badRange = Boolean(startDate && endDate && endDate < startDate);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!title.trim() || saving) return;
+    if (!title.trim() || saving || badRange) return;
     setSaving(true);
     try {
       await onSubmit({
@@ -48,6 +54,8 @@ export default function TaskForm({
         description: description.trim(),
         priority,
         assignee_id: assigneeId,
+        start_date: startDate || null,
+        end_date: endDate || null,
       });
     } finally {
       setSaving(false);
@@ -100,9 +108,39 @@ export default function TaskForm({
         </select>
       </div>
       <div className="flex gap-2">
+        <label className="flex flex-1 flex-col gap-1">
+          <span className="font-mono text-[9px] tracking-[2px] text-fg3">
+            INICIO
+          </span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className={`${INPUT} cursor-pointer`}
+          />
+        </label>
+        <label className="flex flex-1 flex-col gap-1">
+          <span className="font-mono text-[9px] tracking-[2px] text-fg3">
+            FIN
+          </span>
+          <input
+            type="date"
+            value={endDate}
+            min={startDate || undefined}
+            onChange={(e) => setEndDate(e.target.value)}
+            className={`${INPUT} cursor-pointer`}
+          />
+        </label>
+      </div>
+      {badRange && (
+        <div className="font-mono text-[10px] text-red-hi">
+          ✕ La fecha de fin no puede ser anterior a la de inicio
+        </div>
+      )}
+      <div className="flex gap-2">
         <button
           type="submit"
-          disabled={saving || !title.trim()}
+          disabled={saving || !title.trim() || badRange}
           className="flex-1 cursor-pointer bg-cyan px-3 py-2 font-mono text-[10px] font-semibold tracking-[2px] text-[#04121a] hover:bg-cyan-hi disabled:cursor-not-allowed disabled:opacity-40"
         >
           {saving ? "GUARDANDO…" : submitLabel}

@@ -51,6 +51,12 @@ body {
   background: transparent;
 }
 
+/* el selector nativo de fecha necesita saber que el tema es oscuro para que el
+   icono del calendario y el popup no salgan en blanco */
+input[type="date"] {
+  color-scheme: dark;
+}
+
 /* rejilla de fondo cyberpunk (login) */
 .nexa-grid-bg {
   background-image: linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),

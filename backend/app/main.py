@@ -8,6 +8,7 @@ from . import models  # noqa: F401 — registra los modelos en Base.metadata
 from . import signaling
 from .config import AVATAR_DIR, CORS_ORIGINS
 from .database import Base, SessionLocal, engine
+from .migrate import run_light_migrations
 from .routers import auth, github, groups, tasks, users
 from .seed import seed
 
@@ -18,6 +19,7 @@ AVATAR_DIR.mkdir(parents=True, exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    run_light_migrations(engine)
     with SessionLocal() as db:
         seed(db)
     yield

@@ -1,8 +1,9 @@
 "use client";
 
 import { DragEvent } from "react";
-import { GripVertical, Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, GripVertical, Pencil, Trash2 } from "lucide-react";
 import TaskForm, { TaskFormValues } from "@/components/TaskForm";
+import { formatRange, parseISODate, today } from "@/lib/dates";
 import { priorityMeta } from "@/lib/planner";
 import type { Task, User } from "@/lib/types";
 
@@ -34,6 +35,11 @@ export default function TaskCard({
   onDrop: (e: DragEvent<HTMLDivElement>) => void;
 }) {
   const priority = priorityMeta(task.priority);
+  const range = formatRange(task.start_date, task.end_date);
+  const late =
+    task.end_date !== null &&
+    task.status !== "terminado" &&
+    parseISODate(task.end_date) < today();
 
   if (editing) {
     return (
@@ -100,12 +106,23 @@ export default function TaskCard({
         </p>
       )}
 
-      <div className="flex items-center gap-2 pl-[21px]">
+      <div className="flex flex-wrap items-center gap-2 pl-[21px]">
         <span
           className={`border px-1.5 py-0.5 font-mono text-[9px] tracking-[1px] ${priority.chip}`}
         >
           {priority.label}
         </span>
+        {range && (
+          <span
+            title={late ? "Fecha de fin pasada" : "Fechas de la tarea"}
+            className={`flex items-center gap-1 border px-1.5 py-0.5 font-mono text-[9px] ${
+              late ? "border-red/40 text-red-hi" : "border-line2 text-fg2"
+            }`}
+          >
+            <CalendarDays size={9} strokeWidth={2} />
+            {range}
+          </span>
+        )}
         <span className="ml-auto flex items-center gap-1.5">
           {task.assignee ? (
             <>
