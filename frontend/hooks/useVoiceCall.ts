@@ -129,7 +129,7 @@ export function useVoiceCall(groupId: number | null) {
   );
 
   /**
-   * Sube el techo del encoder para la pantalla: hasta 60fps y 16 Mbps,
+   * Sube el techo del encoder para la pantalla: hasta 60fps y 8 Mbps,
    * degradando resolución antes que fluidez si falta ancho de banda.
    */
   const boostScreenSenders = useCallback(() => {
@@ -142,7 +142,7 @@ export function useVoiceCall(groupId: number | null) {
           params.degradationPreference = "maintain-framerate";
           if (!params.encodings?.length) params.encodings = [{}];
           params.encodings[0].maxFramerate = 60;
-          params.encodings[0].maxBitrate = 16_000_000;
+          params.encodings[0].maxBitrate = 8_000_000;
           await sender.setParameters(params);
         } catch {
           /* navegadores viejos: se queda con los defaults */
