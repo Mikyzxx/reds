@@ -8,8 +8,8 @@ import { login } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("demo@nexa.dev");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -63,6 +63,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              placeholder="tu@email.com"
               className="w-full border border-line2 bg-field px-3 py-[11px] font-mono text-[13px] text-fg outline-none focus:border-cyan/50"
             />
           </div>
@@ -76,6 +77,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
+              placeholder="••••••••"
               className="w-full border border-line2 bg-field px-3 py-[11px] font-mono text-[13px] text-fg outline-none focus:border-cyan/50"
             />
           </div>
@@ -91,13 +93,13 @@ export default function LoginPage() {
             disabled={busy}
             className="mt-2.5 flex cursor-pointer items-center justify-center gap-2 bg-cyan p-[13px] text-sm font-semibold tracking-wide text-[#04121a] transition hover:bg-cyan-hi hover:shadow-[0_0_24px_rgba(0,229,255,.4)] disabled:opacity-60"
           >
-            {busy ? "CONECTANDO…" : "ENTRAR COMO DEMO"}
+            {busy ? "CONECTANDO…" : "ENTRAR"}
             {!busy && <ArrowRight size={16} strokeWidth={2.5} />}
           </button>
         </div>
 
         <div className="mt-[22px] text-center font-mono text-[10px] text-fg3">
-          sesión demo · ¿sin cuenta?{" "}
+          ¿sin cuenta?{" "}
           <Link href="/register" className="text-cyan hover:text-cyan-hi">
             → crear una
           </Link>
