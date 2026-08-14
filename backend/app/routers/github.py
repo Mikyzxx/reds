@@ -4,6 +4,7 @@ El token OAuth vive cifrado en `github_accounts`; el frontend solo habla
 con estos endpoints usando su JWT de NEXA.
 """
 
+import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlencode
 
@@ -16,6 +17,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..auth import get_current_user
 from ..config import (
+    CORS_ORIGINS,
     FRONTEND_URL,
     GITHUB_CLIENT_ID,
     GITHUB_CLIENT_SECRET,
@@ -31,9 +33,23 @@ router = APIRouter(prefix="/api/github", tags=["github"])
 STATE_PURPOSE = "gh_oauth"
 STATE_TTL_MINUTES = 10
 
+# Mismos dominios que el allow_origin_regex del CORS en main.py
+_ORIGIN_RE = re.compile(r"^https://[^/]+\.(ngrok(-free)?\.(app|dev|io)|vercel\.app)$")
 
-def _ide_redirect(**params: str) -> RedirectResponse:
-    return RedirectResponse(f"{FRONTEND_URL}/app/ide?{urlencode(params)}", status_code=302)
+
+def _safe_origin(origin: str | None) -> str | None:
+    """Valida el origen que manda el frontend para el redirect post-callback."""
+    if not origin:
+        return None
+    origin = origin.rstrip("/")
+    if origin in CORS_ORIGINS or _ORIGIN_RE.match(origin):
+        return origin
+    return None
+
+
+def _ide_redirect(origin: str | None = None, **params: str) -> RedirectResponse:
+    base = origin or FRONTEND_URL
+    return RedirectResponse(f"{base}/app/ide?{urlencode(params)}", status_code=302)
 
 
 def _require_oauth_config() -> None:
@@ -67,12 +83,14 @@ def get_github_token(
 
 
 @router.get("/connect", response_model=schemas.GhConnectOut)
-def connect(current: models.User = Depends(get_current_user)):
+def connect(origin: str | None = None, current: models.User = Depends(get_current_user)):
     _require_oauth_config()
     state = jwt.encode(
         {
             "sub": str(current.id),
             "purpose": STATE_PURPOSE,
+            # origen real del frontend (localhost/ngrok/vercel) para volver ahí
+            "origin": _safe_origin(origin),
             "exp": datetime.now(timezone.utc) + timedelta(minutes=STATE_TTL_MINUTES),
         },
         SECRET_KEY,
@@ -105,15 +123,17 @@ async def callback(
     except (jwt.PyJWTError, KeyError, ValueError):
         return _ide_redirect(github="error", reason="invalid_state")
 
+    origin = _safe_origin(payload.get("origin"))
+
     user = db.get(models.User, user_id)
     if user is None:
-        return _ide_redirect(github="error", reason="unknown_user")
+        return _ide_redirect(origin, github="error", reason="unknown_user")
 
     try:
         token_data = await gh.exchange_code(code)
         gh_user = await gh.get_github_user(token_data["access_token"])
     except HTTPException as e:
-        return _ide_redirect(github="error", reason=quote(str(e.detail)))
+        return _ide_redirect(origin, github="error", reason=quote(str(e.detail)))
 
     account = _get_account(db, user_id)
     if account is None:
@@ -124,7 +144,7 @@ async def callback(
     account.github_avatar_url = gh_user.get("avatar_url")
     account.scopes = token_data.get("scope", "")
     db.commit()
-    return _ide_redirect(github="connected")
+    return _ide_redirect(origin, github="connected")
 
 
 @router.get("/status", response_model=schemas.GhStatusOut)

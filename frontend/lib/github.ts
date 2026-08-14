@@ -64,7 +64,10 @@ export interface GhPullResult {
 export const ghStatus = () => api<GhStatus>("/api/github/status");
 
 export const ghConnectUrl = () =>
-  api<{ authorize_url: string }>("/api/github/connect");
+  api<{ authorize_url: string }>(
+    // el backend firma este origen en el state para devolvernos aquí tras el callback
+    `/api/github/connect?origin=${encodeURIComponent(window.location.origin)}`,
+  );
 
 export const ghDisconnect = () =>
   api<void>("/api/github/disconnect", { method: "DELETE" });
