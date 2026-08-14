@@ -41,6 +41,14 @@ CORS_ORIGINS = [
     if o.strip()
 ]
 
+# Integración GitHub (OAuth App): crear en GitHub → Settings → Developer settings
+# → OAuth Apps, con callback http://localhost:3000/api/github/callback
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
+GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
+GITHUB_OAUTH_SCOPES = "repo"
+# A dónde redirige el backend tras el callback OAuth (la pantalla del IDE)
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 AVATAR_DIR = Path(__file__).resolve().parent.parent / "uploads" / "avatars"
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
 ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}

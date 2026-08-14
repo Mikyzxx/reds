@@ -31,6 +31,86 @@ class TokenOut(BaseModel):
     user: UserOut
 
 
+# --- GitHub / IDE ---
+
+
+class GhStatusOut(BaseModel):
+    connected: bool
+    login: str | None = None
+    avatar_url: str | None = None
+
+
+class GhConnectOut(BaseModel):
+    authorize_url: str
+
+
+class GhRepoOut(BaseModel):
+    full_name: str
+    name: str
+    owner: str
+    private: bool
+    default_branch: str
+    pushed_at: datetime | None = None
+    description: str | None = None
+
+
+class GhBranchOut(BaseModel):
+    name: str
+    sha: str
+
+
+class GhTreeEntryOut(BaseModel):
+    path: str
+    type: str  # "blob" | "tree"
+    size: int | None = None
+    sha: str
+
+
+class GhTreeOut(BaseModel):
+    head_sha: str
+    truncated: bool = False
+    entries: list[GhTreeEntryOut]
+
+
+class GhFileOut(BaseModel):
+    path: str
+    sha: str
+    size: int
+    is_binary: bool = False
+    too_large: bool = False
+    content: str | None = None
+
+
+class GhCommitFileIn(BaseModel):
+    path: str = Field(min_length=1, max_length=512)
+    content: str
+
+
+class GhCommitIn(BaseModel):
+    branch: str = Field(min_length=1, max_length=255)
+    expected_head_sha: str = Field(min_length=7, max_length=64)
+    message: str = Field(min_length=1, max_length=2000)
+    files: list[GhCommitFileIn] = Field(min_length=1, max_length=100)
+
+
+class GhCommitOut(BaseModel):
+    new_head_sha: str
+    commit_url: str
+
+
+class GhPullFileOut(BaseModel):
+    filename: str
+    status: str  # added | modified | removed | renamed
+    previous_filename: str | None = None
+
+
+class GhPullOut(BaseModel):
+    up_to_date: bool
+    head_sha: str
+    full_refresh: bool = False
+    files: list[GhPullFileOut] = []
+
+
 class GroupIn(BaseModel):
     name: str
     description: str = ""
