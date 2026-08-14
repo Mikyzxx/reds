@@ -8,6 +8,14 @@ export function wsBase(): string {
   return `${protocol === "https:" ? "wss" : "ws"}://${host}`;
 }
 
+/** Convierte rutas de archivos servidos por el backend (/api/avatars/…,
+ * /api/files/…) en URL absoluta cuando el frontend NO proxea /api (producción
+ * con NEXT_PUBLIC_API_URL): una src relativa moriría en el host del frontend. */
+export function assetUrl(path: string | null | undefined): string {
+  if (!path) return "";
+  return path.startsWith("/") ? `${API_URL}${path}` : path;
+}
+
 const TOKEN_KEY = "nexa_token";
 
 export function getToken(): string | null {

@@ -12,6 +12,7 @@ import { usePathname, useRouter } from "next/navigation";
 import ActiveCallBar from "@/components/ActiveCallBar";
 import { CallProvider } from "@/contexts/CallContext";
 import { logout, useSession } from "@/lib/auth";
+import { assetUrl } from "@/lib/api";
 
 const NAV_ITEMS = [
   { num: "01", label: "PLANNER", href: "/app/planner", Icon: SquareKanban },
@@ -81,7 +82,7 @@ export default function AppLayout({
             >
               {user.avatar_url ? (
                 <img
-                  src={user.avatar_url}
+                  src={assetUrl(user.avatar_url)}
                   alt={user.display_name}
                   className="h-8 w-8 flex-none border border-cyan/30 object-cover"
                 />

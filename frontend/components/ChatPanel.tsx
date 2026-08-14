@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { assetUrl } from "@/lib/api";
 import {
   MAX_CHAT_FILE_BYTES,
   uploadAttachment,
@@ -40,6 +41,13 @@ function attachmentIcon(mime: string) {
 const isImage = (a: ChatAttachment) => a.mime.startsWith("image/");
 const isVideo = (a: ChatAttachment) => a.mime.startsWith("video/");
 
+/** src absoluta del adjunto (en prod el backend vive en otro origen). */
+const mediaSrc = (a: ChatAttachment) => assetUrl(a.url);
+/** href de descarga: `?name=` fija el nombre del archivo server-side, porque
+ * el atributo `download` se ignora en enlaces cross-origin. */
+const downloadHref = (a: ChatAttachment) =>
+  assetUrl(`${a.url}?name=${encodeURIComponent(a.name)}`);
+
 function Attachment({
   attachment,
   onPreview,
@@ -56,7 +64,7 @@ function Attachment({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={attachment.url}
+          src={mediaSrc(attachment)}
           alt={attachment.name}
           className="max-h-40 max-w-full border border-line2 object-contain hover:border-cyan/50"
         />
@@ -68,7 +76,7 @@ function Attachment({
       <div className="border border-line2">
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
-          src={attachment.url}
+          src={mediaSrc(attachment)}
           controls
           preload="metadata"
           className="max-h-40 w-full bg-black"
@@ -85,7 +93,7 @@ function Attachment({
             <Maximize2 size={11} strokeWidth={2} />
           </button>
           <a
-            href={attachment.url}
+            href={downloadHref(attachment)}
             download={attachment.name}
             title="Descargar"
             className="flex-none text-fg3 hover:text-cyan"
@@ -99,7 +107,7 @@ function Attachment({
   const Icon = attachmentIcon(attachment.mime);
   return (
     <a
-      href={attachment.url}
+      href={downloadHref(attachment)}
       download={attachment.name}
       className="flex items-center gap-2 border border-line2 bg-field px-2.5 py-2 hover:border-cyan/50"
     >
@@ -160,7 +168,7 @@ function Lightbox({
             <Maximize2 size={13} strokeWidth={2} />
           </button>
           <a
-            href={attachment.url}
+            href={downloadHref(attachment)}
             download={attachment.name}
             title="Descargar"
             className="border border-line2 p-1.5 text-fg2 hover:border-cyan hover:text-cyan"
@@ -185,7 +193,7 @@ function Lightbox({
         {isVideo(attachment) ? (
           /* eslint-disable-next-line jsx-a11y/media-has-caption */
           <video
-            src={attachment.url}
+            src={mediaSrc(attachment)}
             controls
             autoPlay
             className="max-h-full max-w-full"
@@ -193,7 +201,7 @@ function Lightbox({
         ) : (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
-            src={attachment.url}
+            src={mediaSrc(attachment)}
             alt={attachment.name}
             className="max-h-full max-w-full object-contain"
           />
@@ -299,7 +307,7 @@ export default function ChatPanel({
                 {m.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={m.avatarUrl}
+                    src={assetUrl(m.avatarUrl)}
                     alt={m.displayName}
                     className="h-5 w-5 flex-none border border-cyan/30 object-cover"
                   />

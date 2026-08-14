@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { AtSign, Camera, Mail, Trash2 } from "lucide-react";
 import { getStoredUser, removeAvatar, uploadAvatar } from "@/lib/auth";
 import type { User } from "@/lib/types";
+import { assetUrl } from "@/lib/api";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -72,7 +73,7 @@ export default function ProfilePage() {
             <div className="group relative h-20 w-20 flex-none">
               {user.avatar_url ? (
                 <img
-                  src={user.avatar_url}
+                  src={assetUrl(user.avatar_url)}
                   alt={user.display_name}
                   className="h-20 w-20 border border-cyan/30 object-cover"
                 />

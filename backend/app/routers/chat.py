@@ -169,16 +169,19 @@ def upload_attachment(
 
 
 @files_router.get("/api/files/{filename}")
-def get_file(filename: str):
+def get_file(filename: str, name: str | None = None):
     # Content-Disposition: attachment evita servir HTML/SVG subido inline en
     # el origen de la app (XSS almacenado); las <img> de miniaturas lo ignoran.
+    # `name` fija el nombre de descarga (el atributo `download` de un <a> se
+    # ignora cross-origin, así que el nombre tiene que venir del servidor).
     if not _FILENAME_RE.match(filename):
         raise HTTPException(status_code=404, detail="No encontrado")
     path = CHAT_DIR / filename
     if not path.is_file():
         raise HTTPException(status_code=404, detail="No encontrado")
+    download_name = re.sub(r"[\\/\r\n\"';]", "_", name).strip()[:255] if name else filename
     return FileResponse(
         path,
-        filename=filename,
+        filename=download_name or filename,
         content_disposition_type="attachment",
     )

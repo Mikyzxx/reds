@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { MicOff, Volume1, Volume2, VolumeX } from "lucide-react";
 import VideoSurface from "./VideoSurface";
+import { assetUrl } from "@/lib/api";
 
 export default function ParticipantTile({
   initials,
@@ -55,7 +56,7 @@ export default function ParticipantTile({
         <VideoSurface stream={stream} mirror={mirror} />
       ) : avatarUrl && !avatarFailed ? (
         <img
-          src={avatarUrl}
+          src={assetUrl(avatarUrl)}
           alt={name}
           onError={() => setAvatarFailed(true)}
           className="absolute inset-0 h-full w-full object-cover"
