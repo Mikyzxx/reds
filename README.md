@@ -7,13 +7,22 @@ App de trabajo en equipo con estética minimalista cyberpunk. **Fase 1**: login 
 | Capa | Tecnología |
 |---|---|
 | Frontend | Next.js 16 · React 19 · Tailwind CSS v4 · TypeScript |
-| Backend | Python · FastAPI · SQLAlchemy · MySQL |
+| Backend | Python · FastAPI · SQLAlchemy · MySQL o PostgreSQL |
 | Llamadas | WebRTC mesh (P2P) · señalización por WebSocket · STUN de Google |
 
 ## Requisitos
 
 - Node.js ≥ 20, Python ≥ 3.11
-- MySQL accesible en `127.0.0.1:3306` con la base `appdb` (credenciales en `backend/.env`)
+- Base de datos con la base `appdb`: MySQL en `127.0.0.1:3306` (por defecto) o PostgreSQL en `127.0.0.1:5432` (credenciales en `backend/.env`)
+
+### Variables de entorno (`backend/.env`)
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `DB_ENGINE` | `mysql` | Motor de BD: `mysql` o `postgres` |
+| `DB_HOST` / `DB_PORT` | `127.0.0.1` / `3306` ó `5432` | Host y puerto (el puerto default depende del motor) |
+| `DB_USER` / `DB_PASSWORD` / `DB_NAME` | `admin` / — / `appdb` | Credenciales y nombre de la base |
+| `DATABASE_URL` | — | URL completa; si existe tiene prioridad sobre lo anterior (formato Railway/Render, se acepta `postgresql://` o `mysql://`) |
 
 ## Arranque
 
