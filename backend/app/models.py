@@ -19,6 +19,25 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     memberships: Mapped[list["GroupMember"]] = relationship(back_populates="user")
+    github_account: Mapped["GitHubAccount | None"] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class GitHubAccount(Base):
+    __tablename__ = "github_accounts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    encrypted_token: Mapped[str] = mapped_column(String(512))
+    github_login: Mapped[str] = mapped_column(String(128))
+    github_avatar_url: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    scopes: Mapped[str] = mapped_column(String(128), default="")
+    connected_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    user: Mapped[User] = relationship(back_populates="github_account")
 
 
 class Group(Base):

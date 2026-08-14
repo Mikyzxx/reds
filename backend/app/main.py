@@ -8,7 +8,7 @@ from . import models  # noqa: F401 — registra los modelos en Base.metadata
 from . import signaling
 from .config import AVATAR_DIR, CORS_ORIGINS
 from .database import Base, SessionLocal, engine
-from .routers import auth, groups, tasks, users
+from .routers import auth, github, groups, tasks, users
 from .seed import seed
 
 
@@ -35,6 +35,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(github.router)
 app.include_router(users.router)
 app.include_router(groups.router)
 app.include_router(tasks.router)

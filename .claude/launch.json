@@ -5,12 +5,19 @@
       "name": "nexa-frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
-      "port": 3000
+      "port": 3000,
+      "autoPort": true
     },
     {
       "name": "nexa-backend",
-      "runtimeExecutable": "backend/.venv/Scripts/python.exe",
+      "runtimeExecutable": "backend/.venv/bin/python",
       "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--reload", "--port", "8000", "--app-dir", "backend"],
+      "port": 8000
+    },
+    {
+      "name": "nexa-backend-sqlite",
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["DATABASE_URL=sqlite:////tmp/nexa-dev.db", "backend/.venv/bin/python", "-m", "uvicorn", "app.main:app", "--port", "8000", "--app-dir", "backend"],
       "port": 8000
     }
   ]
