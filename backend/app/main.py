@@ -50,4 +50,4 @@ app.mount("/api/avatars", StaticFiles(directory=AVATAR_DIR), name="avatars")
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "nexa-api"}
+    return {"status": "ok", "service": "nexa-api"}  
