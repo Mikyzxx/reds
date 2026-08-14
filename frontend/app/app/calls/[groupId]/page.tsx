@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import {
   Check,
   Link2,
@@ -14,7 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import ParticipantTile from "@/components/ParticipantTile";
 import ShareStage from "@/components/ShareStage";
-import { useVoiceCall } from "@/hooks/useVoiceCall";
+import { useCallSession } from "@/contexts/CallContext";
 import { api } from "@/lib/api";
 import { getStoredUser } from "@/lib/auth";
 import type { Group } from "@/lib/types";
@@ -50,7 +50,15 @@ export default function CallRoomPage({
     setShareVolume,
     peerVolumes,
     setPeerVolume,
-  } = useVoiceCall(id);
+    joinCall,
+    leaveCall,
+  } = useCallSession();
+
+  // conecta al entrar a la sala; si ya estábamos conectados a este mismo
+  // grupo (volviendo de otra sección) es un no-op, no reconecta
+  useEffect(() => {
+    joinCall(id);
+  }, [id, joinCall]);
 
   useEffect(() => {
     api<Group[]>("/api/groups")
@@ -71,13 +79,29 @@ export default function CallRoomPage({
   const shareStream = sharing ? localScreenStream : peerScreenStream;
   const shareTrack = shareStream?.getVideoTracks()[0] ?? null;
   const sharingPeerId = sharing ? null : (sharingPeer?.userId ?? null);
+
+  // ref con la última sampleShareStats: viene del contexto de la llamada, y
+  // el compiler no puede probar que es estable aunque en runtime lo es
+  // (useCallback con deps [] en useVoiceCall) — así evitamos que "cambie" en
+  // el arreglo de dependencias de abajo.
+  const sampleShareStatsRef = useRef(sampleShareStats);
+  useEffect(() => {
+    sampleShareStatsRef.current = sampleShareStats;
+  }, [sampleShareStats]);
+
+  // sharingPeerId se deriva de `peers` (viene del contexto de la llamada);
+  // el React Compiler no puede probar que ese origen es estable y por eso
+  // se niega a preservar esta memoización manual — es un falso positivo
+  // conocido con valores derivados de contexto, no aplica acá.
+  /* eslint-disable react-hooks/preserve-manual-memoization */
   const sampleStats = useCallback(
     () =>
       shareTrack
-        ? sampleShareStats(shareTrack, sharingPeerId)
+        ? sampleShareStatsRef.current(shareTrack, sharingPeerId)
         : Promise.resolve(null),
-    [shareTrack, sharingPeerId, sampleShareStats],
+    [shareTrack, sharingPeerId],
   );
+  /* eslint-enable react-hooks/preserve-manual-memoization */
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -245,7 +269,10 @@ export default function CallRoomPage({
           {sharing ? "DEJAR DE COMPARTIR" : "COMPARTIR"}
         </button>
         <button
-          onClick={() => router.push("/app/calls")}
+          onClick={() => {
+            leaveCall();
+            router.push("/app/calls");
+          }}
           className="flex w-24 cursor-pointer items-center justify-center gap-1.5 border border-red bg-red py-3 font-mono text-[11px] tracking-wide text-white hover:bg-red-hi"
         >
           <PhoneOff size={13} strokeWidth={2} />

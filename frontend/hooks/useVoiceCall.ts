@@ -29,6 +29,13 @@ interface PeerEntry {
   polite: boolean;
   makingOffer: boolean;
   ignoreOffer: boolean;
+  /** transceivers fijos (ver createEntry): togglear medios usa replaceTrack +
+   * direction, nunca addTrack/removeTrack, para no romper el orden de m-lines
+   * en renegociaciones futuras. */
+  micTx: RTCRtpTransceiver;
+  camTx: RTCRtpTransceiver;
+  screenVideoTx: RTCRtpTransceiver;
+  screenAudioTx: RTCRtpTransceiver;
 }
 
 /** Muestra puntual de getStats() sobre el video compartido (acumulados). */
@@ -50,8 +57,12 @@ export interface ShareStatsSnapshot {
  * - señalización por WebSocket contra el backend
  * - renegociación con "perfect negotiation" (polite = userId mayor)
  * - detección de "hablando" con AnalyserNode sobre cada stream de audio
+ *
+ * `groupId` null = sin llamada activa. Este hook vive en el layout (ver
+ * CallProvider) para que la conexión sobreviva a la navegación entre
+ * secciones; solo se desconecta cuando `groupId` pasa a null o cambia.
  */
-export function useVoiceCall(groupId: number) {
+export function useVoiceCall(groupId: number | null) {
   const [status, setStatus] = useState<CallStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [micOn, setMicOn] = useState(true);
@@ -117,40 +128,26 @@ export function useVoiceCall(groupId: number) {
     [],
   );
 
-  const localTracks = useCallback((): [MediaStreamTrack, MediaStream][] => {
-    const out: [MediaStreamTrack, MediaStream][] = [];
-    for (const stream of [
-      micStreamRef.current,
-      camStreamRef.current,
-      screenStreamRef.current,
-    ]) {
-      if (stream) stream.getTracks().forEach((t) => out.push([t, stream]));
-    }
-    return out;
-  }, []);
-
   /**
    * Sube el techo del encoder para la pantalla: hasta 60fps y 16 Mbps,
    * degradando resolución antes que fluidez si falta ancho de banda.
    */
   const boostScreenSenders = useCallback(() => {
-    const track = screenStreamRef.current?.getVideoTracks()[0];
-    if (!track) return;
-    entriesRef.current.forEach(({ pc }) => {
-      pc.getSenders()
-        .filter((s) => s.track === track)
-        .forEach(async (sender) => {
-          try {
-            const params = sender.getParameters();
-            params.degradationPreference = "maintain-framerate";
-            if (!params.encodings?.length) params.encodings = [{}];
-            params.encodings[0].maxFramerate = 60;
-            params.encodings[0].maxBitrate = 16_000_000;
-            await sender.setParameters(params);
-          } catch {
-            /* navegadores viejos: se queda con los defaults */
-          }
-        });
+    entriesRef.current.forEach(({ screenVideoTx }) => {
+      const sender = screenVideoTx.sender;
+      if (!sender.track) return;
+      (async () => {
+        try {
+          const params = sender.getParameters();
+          params.degradationPreference = "maintain-framerate";
+          if (!params.encodings?.length) params.encodings = [{}];
+          params.encodings[0].maxFramerate = 60;
+          params.encodings[0].maxBitrate = 16_000_000;
+          await sender.setParameters(params);
+        } catch {
+          /* navegadores viejos: se queda con los defaults */
+        }
+      })();
     });
   }, []);
 
@@ -160,23 +157,58 @@ export function useVoiceCall(groupId: number) {
       if (existing) return existing;
 
       const pc = new RTCPeerConnection(ICE_SERVERS);
+
+      // Transceivers fijos: se crean una sola vez, en este orden, y nunca se
+      // agregan/quitan m-lines después. Prender o apagar cámara/pantalla solo
+      // cambia replaceTrack() + direction (ver toggleCam/toggleShare), nunca
+      // addTrack/removeTrack — eso es lo que rompía la renegociación tras
+      // varios toggles ("the order of m-lines in subsequent offer doesn't
+      // match order from previous offer/answer").
+      const micTrack = micStreamRef.current?.getAudioTracks()[0] ?? null;
+      const micTx = micTrack
+        ? pc.addTransceiver(micTrack, {
+            direction: "sendrecv",
+            streams: [micStreamRef.current!],
+          })
+        : pc.addTransceiver("audio", { direction: "recvonly" });
+
+      const camTrack = camStreamRef.current?.getVideoTracks()[0] ?? null;
+      const camTx = camTrack
+        ? pc.addTransceiver(camTrack, {
+            direction: "sendrecv",
+            streams: [camStreamRef.current!],
+          })
+        : pc.addTransceiver("video", { direction: "recvonly" });
+
+      const screenVideoTrack = screenStreamRef.current?.getVideoTracks()[0] ?? null;
+      const screenVideoTx = screenVideoTrack
+        ? pc.addTransceiver(screenVideoTrack, {
+            direction: "sendrecv",
+            streams: [screenStreamRef.current!],
+          })
+        : pc.addTransceiver("video", { direction: "recvonly" });
+
+      const screenAudioTrack = screenStreamRef.current?.getAudioTracks()[0] ?? null;
+      const screenAudioTx = screenAudioTrack
+        ? pc.addTransceiver(screenAudioTrack, {
+            direction: "sendrecv",
+            streams: [screenStreamRef.current!],
+          })
+        : pc.addTransceiver("audio", { direction: "recvonly" });
+
       const entry: PeerEntry = {
         pc,
         polite: myIdRef.current > peerId,
         makingOffer: false,
         ignoreOffer: false,
+        micTx,
+        camTx,
+        screenVideoTx,
+        screenAudioTx,
       };
       entriesRef.current.set(peerId, entry);
-
-      const tracks = localTracks();
-      if (tracks.length > 0) {
-        tracks.forEach(([t, stream]) => pc.addTrack(t, stream));
-        // si ya estamos compartiendo, el sender nuevo también va a 60fps
-        boostScreenSenders();
-      } else {
-        // sin micrófono (permiso denegado) igual se puede escuchar
-        pc.addTransceiver("audio", { direction: "recvonly" });
-      }
+      // si ya estamos compartiendo pantalla, el sender nuevo también va a 60fps
+      boostScreenSenders();
 
       pc.onnegotiationneeded = async () => {
         try {
@@ -282,7 +314,7 @@ export function useVoiceCall(groupId: number) {
 
       return entry;
     },
-    [attachAnalyser, boostScreenSenders, localTracks, send, updatePeer],
+    [attachAnalyser, boostScreenSenders, send, updatePeer],
   );
 
   const asCallPeer = (info: PeerInfo): CallPeer => ({
@@ -419,11 +451,18 @@ export function useVoiceCall(groupId: number) {
   useEffect(() => {
     let cancelled = false;
     closedRef.current = false;
-    setStatus("connecting");
+
+    if (groupId == null) {
+      // sin sala activa: nada que conectar. El estado ya está en sus valores
+      // por defecto (montaje inicial) o fue reseteado por el cleanup de la
+      // conexión anterior, más abajo, al salir de una llamada.
+      return;
+    }
 
     let ws: WebSocket | null = null;
 
     (async () => {
+      setStatus("connecting");
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true },
@@ -493,6 +532,21 @@ export function useVoiceCall(groupId: number) {
       }
       audioCtxRef.current?.close().catch(() => {});
       audioCtxRef.current = null;
+
+      // deja el estado listo para la próxima llamada (o para "idle" si no
+      // hay ninguna otra): se ejecuta al salir de esta sala, ya sea porque
+      // groupId pasó a null o porque cambió a otra sala distinta
+      setStatus("idle");
+      setError(null);
+      setPeers([]);
+      setMicOn(true);
+      setCamOn(false);
+      setSharing(false);
+      setSelfSpeaking(false);
+      setLocalCamStream(null);
+      setLocalScreenStream(null);
+      setPeerVolumesState({});
+      peerVolumesRef.current = {};
     };
   }, [groupId, attachAnalyser, handleMessage]);
 
@@ -550,21 +604,14 @@ export function useVoiceCall(groupId: number) {
     send({ type: next ? "unmute" : "mute" });
   }, [micOn, send]);
 
-  const removeLocalStream = useCallback((stream: MediaStream) => {
-    const tracks = stream.getTracks();
-    entriesRef.current.forEach(({ pc }) => {
-      pc.getSenders()
-        .filter((s) => s.track && tracks.includes(s.track))
-        .forEach((s) => pc.removeTrack(s));
-    });
-    tracks.forEach((t) => t.stop());
-  }, []);
-
   const toggleCam = useCallback(async () => {
     if (camOn) {
-      const stream = camStreamRef.current;
-      if (stream) removeLocalStream(stream);
+      camStreamRef.current?.getTracks().forEach((t) => t.stop());
       camStreamRef.current = null;
+      entriesRef.current.forEach(({ camTx }) => {
+        camTx.sender.replaceTrack(null);
+        camTx.direction = "recvonly";
+      });
       setLocalCamStream(null);
       setCamOn(false);
       send({ type: "cam-off" });
@@ -579,27 +626,39 @@ export function useVoiceCall(groupId: number) {
       track.onended = () => {
         // cámara desconectada/revocada
         camStreamRef.current = null;
+        entriesRef.current.forEach(({ camTx }) => {
+          camTx.sender.replaceTrack(null);
+          camTx.direction = "recvonly";
+        });
         setLocalCamStream(null);
         setCamOn(false);
         send({ type: "cam-off" });
       };
-      entriesRef.current.forEach(({ pc }) => pc.addTrack(track, stream));
+      entriesRef.current.forEach(({ camTx }) => {
+        camTx.sender.replaceTrack(track);
+        camTx.direction = "sendrecv";
+      });
       setLocalCamStream(stream);
       setCamOn(true);
       send({ type: "cam-on" });
     } catch {
       setError("No se pudo acceder a la cámara. Revisa permisos.");
     }
-  }, [camOn, removeLocalStream, send]);
+  }, [camOn, send]);
 
   const stopShare = useCallback(() => {
-    const stream = screenStreamRef.current;
-    if (stream) removeLocalStream(stream);
+    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
     screenStreamRef.current = null;
+    entriesRef.current.forEach(({ screenVideoTx, screenAudioTx }) => {
+      screenVideoTx.sender.replaceTrack(null);
+      screenVideoTx.direction = "recvonly";
+      screenAudioTx.sender.replaceTrack(null);
+      screenAudioTx.direction = "recvonly";
+    });
     setLocalScreenStream(null);
     setSharing(false);
     send({ type: "share-stop" });
-  }, [removeLocalStream, send]);
+  }, [send]);
 
   const toggleShare = useCallback(async () => {
     if (sharing) {
@@ -625,14 +684,21 @@ export function useVoiceCall(groupId: number) {
         systemAudio: "include",
       });
       screenStreamRef.current = stream;
-      const track = stream.getVideoTracks()[0];
+      const videoTrack = stream.getVideoTracks()[0];
       // sesga el encoder hacia fluidez (movimiento) en vez de nitidez de texto
-      track.contentHint = "motion";
+      videoTrack.contentHint = "motion";
       // el usuario puede cortar desde el propio chrome del navegador
-      track.onended = stopShare;
-      entriesRef.current.forEach(({ pc }) =>
-        stream.getTracks().forEach((t) => pc.addTrack(t, stream)),
-      );
+      videoTrack.onended = stopShare;
+      const audioTrack = stream.getAudioTracks()[0] ?? null;
+
+      entriesRef.current.forEach(({ screenVideoTx, screenAudioTx }) => {
+        screenVideoTx.sender.replaceTrack(videoTrack);
+        screenVideoTx.direction = "sendrecv";
+        if (audioTrack) {
+          screenAudioTx.sender.replaceTrack(audioTrack);
+          screenAudioTx.direction = "sendrecv";
+        }
+      });
       boostScreenSenders();
       setLocalScreenStream(stream);
       setSharing(true);
