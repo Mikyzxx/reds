@@ -39,7 +39,9 @@ export interface GhFile {
   sha: string;
   size: number;
   is_binary: boolean;
+  is_image: boolean;
   too_large: boolean;
+  /** texto plano; base64 si is_image */
   content: string | null;
 }
 

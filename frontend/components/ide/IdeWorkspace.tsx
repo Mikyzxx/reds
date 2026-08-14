@@ -28,7 +28,9 @@ interface OpenFile {
   original: string;
   current: string;
   isBinary: boolean;
+  isImage: boolean;
   tooLarge: boolean;
+  size: number;
 }
 
 const isDirty = (f: OpenFile) =>
@@ -151,7 +153,9 @@ export default function IdeWorkspace({
             original: content,
             current: content,
             isBinary: f.is_binary,
+            isImage: f.is_image,
             tooLarge: f.too_large,
+            size: f.size,
           },
         }));
         setTabOrder((prev) => (prev.includes(path) ? prev : [...prev, path]));
@@ -256,7 +260,9 @@ export default function IdeWorkspace({
               original: remoteContent,
               current: remoteContent,
               isBinary: remote.is_binary,
+              isImage: remote.is_image,
               tooLarge: remote.too_large,
+              size: remote.size,
             };
           }
         } catch {
@@ -471,12 +477,15 @@ export default function IdeWorkspace({
                 path={activePath}
                 content={activeFile.current}
                 notEditable={
-                  activeFile.isBinary
-                    ? "binary"
-                    : activeFile.tooLarge
-                      ? "too_large"
-                      : null
+                  activeFile.isImage && activeFile.current
+                    ? "image"
+                    : activeFile.isBinary
+                      ? "binary"
+                      : activeFile.tooLarge
+                        ? "too_large"
+                        : null
                 }
+                imageSize={activeFile.size}
                 onChange={(v) => onEdit(activePath, v)}
                 onSave={() => {
                   if (dirtyPaths.size > 0) {

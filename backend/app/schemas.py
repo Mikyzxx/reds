@@ -77,8 +77,9 @@ class GhFileOut(BaseModel):
     sha: str
     size: int
     is_binary: bool = False
+    is_image: bool = False
     too_large: bool = False
-    content: str | None = None
+    content: str | None = None  # texto plano; base64 si is_image
 
 
 class GhCommitFileIn(BaseModel):

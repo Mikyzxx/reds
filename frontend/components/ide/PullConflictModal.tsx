@@ -3,7 +3,7 @@
 import { DiffEditor } from "@monaco-editor/react";
 import { GitPullRequestArrow } from "lucide-react";
 import { useState } from "react";
-import { defineNexaTheme, EDITOR_OPTIONS, NEXA_THEME } from "./CodeEditor";
+import { configureMonaco, EDITOR_OPTIONS, NEXA_THEME } from "./CodeEditor";
 
 export interface PullConflict {
   path: string;
@@ -49,7 +49,7 @@ export default function PullConflictModal({
             original={conflict.remoteContent}
             modified={conflict.localContent}
             theme={NEXA_THEME}
-            beforeMount={defineNexaTheme}
+            beforeMount={configureMonaco}
             options={{ ...EDITOR_OPTIONS, readOnly: true, renderSideBySide: true }}
           />
         </div>

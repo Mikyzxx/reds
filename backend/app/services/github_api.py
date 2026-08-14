@@ -20,6 +20,10 @@ _TIMEOUT = httpx.Timeout(30.0)
 # Contents API solo devuelve JSON con contenido hasta ~1 MB
 MAX_FILE_BYTES = 1024 * 1024
 
+# Imágenes: se sirven en base64 para previsualizar (Blob API si pasan de 1 MB)
+IMAGE_EXTS = {"png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "avif"}
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
 
 # --- cifrado del token (Fernet con clave derivada del SECRET_KEY) ---
 
@@ -156,7 +160,10 @@ async def get_tree(token: str, owner: str, repo: str, sha: str) -> dict:
 
 
 async def get_file(token: str, owner: str, repo: str, path: str, ref: str) -> dict:
-    """Devuelve {path, sha, size, is_binary, too_large, content}."""
+    """Devuelve {path, sha, size, is_binary, is_image, too_large, content}.
+
+    Para imágenes `content` es base64; para texto es el texto plano.
+    """
     res = await gh_request(
         token, "GET", f"/repos/{owner}/{repo}/contents/{path}", params={"ref": ref}
     )
@@ -164,14 +171,32 @@ async def get_file(token: str, owner: str, repo: str, path: str, ref: str) -> di
     if isinstance(data, list) or data.get("type") != "file":
         raise HTTPException(status_code=422, detail="La ruta no es un archivo")
 
+    ext = path.rsplit(".", 1)[-1].lower() if "." in path else ""
     out = {
         "path": path,
         "sha": data["sha"],
         "size": data.get("size", 0),
         "is_binary": False,
+        "is_image": ext in IMAGE_EXTS,
         "too_large": False,
         "content": None,
     }
+
+    if out["is_image"]:
+        out["is_binary"] = True
+        if out["size"] > MAX_IMAGE_BYTES:
+            out["too_large"] = True
+            return out
+        b64 = data.get("content")
+        if not b64:
+            # >1 MB: la Contents API no incluye contenido; usar la Blob API
+            blob = await gh_request(
+                token, "GET", f"/repos/{owner}/{repo}/git/blobs/{data['sha']}"
+            )
+            b64 = blob.json().get("content", "")
+        out["content"] = b64.replace("\n", "")
+        return out
+
     if out["size"] > MAX_FILE_BYTES or not data.get("content"):
         out["too_large"] = True
         return out

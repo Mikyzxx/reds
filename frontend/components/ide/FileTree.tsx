@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, File, FileCode, Folder, FolderOpen } from "lucide-react";
+import { ChevronDown, ChevronRight, File, FileCode, FileImage, Folder, FolderOpen } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Tree, type NodeRendererProps } from "react-arborist";
 import type { GhTreeEntry } from "@/lib/github";
@@ -10,6 +10,8 @@ interface TreeDatum {
   name: string;
   children?: TreeDatum[];
 }
+
+const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "avif", "svg"]);
 
 const CODE_EXTS = new Set([
   "ts", "tsx", "js", "jsx", "py", "rs", "go", "java", "c", "h", "cpp", "cs",
@@ -77,7 +79,7 @@ export default function FileTree({
   function Node({ node, style }: NodeRendererProps<TreeDatum>) {
     const isDir = !node.isLeaf;
     const ext = node.data.name.split(".").pop()?.toLowerCase() ?? "";
-    const FileIcon = CODE_EXTS.has(ext) ? FileCode : File;
+    const FileIcon = IMAGE_EXTS.has(ext) ? FileImage : CODE_EXTS.has(ext) ? FileCode : File;
     const active = node.data.id === activePath;
     return (
       <div

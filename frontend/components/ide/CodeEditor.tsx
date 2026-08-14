@@ -6,6 +6,26 @@ import { useEffect, useRef } from "react";
 
 export const NEXA_THEME = "nexa-dark";
 
+/** Tema + diagnósticos. Cada archivo abierto es un modelo suelto (sin tsconfig
+ * ni node_modules), así que la validación semántica de TS/JS marcaría en rojo
+ * todos los imports; se deja solo la validación de sintaxis. */
+export function configureMonaco(monaco: Monaco) {
+  defineNexaTheme(monaco);
+  const ts = monaco.languages.typescript;
+  for (const defaults of [ts.typescriptDefaults, ts.javascriptDefaults]) {
+    defaults.setDiagnosticsOptions({
+      noSemanticValidation: true,
+      noSyntaxValidation: false,
+    });
+    defaults.setCompilerOptions({
+      jsx: ts.JsxEmit.ReactJSX,
+      allowJs: true,
+      allowNonTsExtensions: true,
+      target: ts.ScriptTarget.ESNext,
+    });
+  }
+}
+
 export function defineNexaTheme(monaco: Monaco) {
   monaco.editor.defineTheme(NEXA_THEME, {
     base: "vs-dark",
@@ -45,16 +65,67 @@ export const EDITOR_OPTIONS = {
   padding: { top: 8 },
 };
 
+const IMAGE_MIME: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  bmp: "image/bmp",
+  ico: "image/x-icon",
+  avif: "image/avif",
+};
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ImageViewer({
+  path,
+  base64,
+  size,
+}: {
+  path: string;
+  base64: string;
+  size: number;
+}) {
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  const mime = IMAGE_MIME[ext] ?? "image/png";
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 overflow-auto p-6">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`data:${mime};base64,${base64}`}
+        alt={path}
+        className="max-h-[85%] max-w-full border border-line2 bg-panel2 object-contain"
+        style={{
+          backgroundImage:
+            "linear-gradient(45deg, #161d27 25%, transparent 25%, transparent 75%, #161d27 75%), linear-gradient(45deg, #161d27 25%, transparent 25%, transparent 75%, #161d27 75%)",
+          backgroundSize: "16px 16px",
+          backgroundPosition: "0 0, 8px 8px",
+        }}
+      />
+      <span className="font-mono text-[10px] tracking-[2px] text-fg3">
+        {path.split("/").pop()} · {formatBytes(size)} · solo lectura
+      </span>
+    </div>
+  );
+}
+
 export default function CodeEditor({
   path,
   content,
   notEditable,
+  imageSize,
   onChange,
   onSave,
 }: {
   path: string;
   content: string;
-  notEditable: "binary" | "too_large" | null;
+  notEditable: "binary" | "too_large" | "image" | null;
+  imageSize?: number;
   onChange: (value: string) => void;
   onSave: () => void;
 }) {
@@ -63,6 +134,10 @@ export default function CodeEditor({
   useEffect(() => {
     onSaveRef.current = onSave;
   }, [onSave]);
+
+  if (notEditable === "image") {
+    return <ImageViewer path={path} base64={content} size={imageSize ?? 0} />;
+  }
 
   if (notEditable) {
     return (
@@ -82,7 +157,7 @@ export default function CodeEditor({
       path={path}
       value={content}
       theme={NEXA_THEME}
-      beforeMount={defineNexaTheme}
+      beforeMount={configureMonaco}
       onMount={(editor, monaco) => {
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () =>
           onSaveRef.current(),
