@@ -84,6 +84,12 @@ Vista mensual de las tareas del mismo grupo que el planner: cada tarea se dibuja
 
 > Las columnas `start_date` / `end_date` se añaden solas al arrancar el backend (ver `backend/app/migrate.py`): `create_all` no altera tablas ya creadas y el proyecto no usa Alembic.
 
+## Donaciones
+
+Apartado `/app/donaciones` (módulo **05** del sidebar) para recibir aportes por Binance: Pay ID copiable para transferencia interna sin comisión, y una tarjeta por red on-chain (USDT BEP20, USDT TRC20, BTC) con la dirección copiable y su QR generado en el navegador. Es puramente estático — sin API de Binance, sin credenciales y sin tocar el backend.
+
+Los datos de cobro se editan en un único sitio, `frontend/lib/donations.ts`; mientras sigan los valores de ejemplo la página muestra un aviso rojo. El QR de Binance Pay es opcional: expórtalo desde la app (Pay → Recibir → guardar imagen) a `frontend/public/donaciones/binance-pay-qr.png` y aparecerá solo. No se genera a partir del Pay ID porque el QR oficial lleva un payload propio de Binance que no se puede reconstruir.
+
 ## Fase 2 (pendiente)
 
 Videollamada + compartir pantalla, chat de sala, IDE multi-lenguaje.

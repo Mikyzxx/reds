@@ -3,6 +3,7 @@
 import {
   CalendarDays,
   Code2,
+  HandCoins,
   Phone,
   Power,
   SquareKanban,
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { num: "02", label: "CALENDARIO", href: "/app/calendar", Icon: CalendarDays },
   { num: "03", label: "LLAMADAS", href: "/app/calls", Icon: Phone },
   { num: "04", label: "IDE", href: "/app/ide", Icon: Code2 },
+  { num: "05", label: "DONACIONES", href: "/app/donaciones", Icon: HandCoins },
 ];
 
 export default function AppLayout({
@@ -41,40 +43,47 @@ export default function AppLayout({
   return (
     <CallProvider>
       <div className="flex h-screen w-screen overflow-hidden">
-        <nav className="flex w-[216px] flex-none flex-col border-r border-line bg-panel py-5">
-          <div className="flex items-baseline gap-2 px-5 pb-6">
-            <span className="text-[19px] font-bold tracking-wide">NEXA</span>
-            <span className="font-mono text-[9px] tracking-[2px] text-cyan">
+        {/* En móvil se reduce a un rail de iconos: con 216px fijos el contenido
+            se quedaba sin ancho utilizable en pantallas de ~375px. */}
+        <nav className="flex w-[60px] flex-none flex-col border-r border-line bg-panel py-4 sm:w-[216px] sm:py-5">
+          <div className="flex items-baseline justify-center gap-2 pb-5 sm:justify-start sm:px-5 sm:pb-6">
+            <span className="text-[15px] font-bold tracking-wide sm:text-[19px]">
+              NEXA
+            </span>
+            <span className="hidden font-mono text-[9px] tracking-[2px] text-cyan sm:inline">
               v0.1
             </span>
           </div>
 
-          <div className="flex flex-col gap-0.5 px-2.5">
+          <div className="flex flex-col gap-0.5 px-1.5 sm:px-2.5">
             {NAV_ITEMS.map((item) => {
               const active = pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2.5 border-l-2 px-3.5 py-[11px] font-mono text-xs tracking-wide ${
+                  title={item.label}
+                  className={`flex items-center justify-center gap-2.5 border-l-2 py-3.5 font-mono text-xs tracking-wide sm:justify-start sm:px-3.5 sm:py-[11px] ${
                     active
                       ? "border-cyan bg-cyan/10 text-fg"
                       : "border-transparent text-fg2 hover:text-fg"
                   }`}
                 >
-                  <span className="text-[10px] text-cyan">{item.num}</span>
+                  <span className="hidden text-[10px] text-cyan sm:inline">
+                    {item.num}
+                  </span>
                   <item.Icon
-                    size={14}
+                    size={16}
                     strokeWidth={1.75}
-                    className="text-cyan/70"
+                    className="flex-none text-cyan/70 sm:size-3.5"
                   />
-                  {item.label}
+                  <span className="hidden sm:inline">{item.label}</span>
                 </Link>
               );
             })}
           </div>
 
-          <div className="mt-auto flex items-center gap-2.5 border-t border-line px-5 pt-4">
+          <div className="mt-auto flex flex-col items-center gap-3 border-t border-line px-2 pt-4 sm:flex-row sm:gap-2.5 sm:px-5">
             <Link
               href="/app/profile"
               title="Ver perfil"
@@ -91,7 +100,7 @@ export default function AppLayout({
                   {user.initials}
                 </div>
               )}
-              <div className="min-w-0">
+              <div className="hidden min-w-0 sm:block">
                 <div className="truncate text-xs font-semibold">
                   {user.display_name}
                 </div>
@@ -106,7 +115,7 @@ export default function AppLayout({
                 logout();
                 router.replace("/login");
               }}
-              className="ml-auto cursor-pointer text-fg3 hover:text-red"
+              className="cursor-pointer text-fg3 hover:text-red sm:ml-auto"
             >
               <Power size={14} strokeWidth={2} />
             </button>
