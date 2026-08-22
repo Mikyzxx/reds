@@ -49,6 +49,15 @@ GITHUB_OAUTH_SCOPES = "repo"
 # A dónde redirige el backend tras el callback OAuth (la pantalla del IDE)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
+# Almacenamiento de archivos subidos: "local" (backend/uploads/) o "s3"
+# (bucket privado, servido con redirects a URLs presignadas — ver storage.py).
+STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local")  # "local" | "s3"
+S3_BUCKET = os.getenv("S3_BUCKET", "")
+AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+# Endpoint alternativo compatible con S3 (Cloudflare R2, MinIO…); vacío = AWS
+S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL") or None
+S3_PRESIGN_EXPIRES = int(os.getenv("S3_PRESIGN_EXPIRES", "3600"))
+
 AVATAR_DIR = Path(__file__).resolve().parent.parent / "uploads" / "avatars"
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
 ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}

@@ -55,7 +55,7 @@ Two independent apps; the frontend **proxies** the backend so one origin serves 
 - `auth.py` + `routers/auth.py` — JWT (HS256, passlib/bcrypt).
 - `routers/` — auth, users (avatars), groups, tasks (planner), chat (+ `files_router` for attachments), github (OAuth + repo API via `services/github_api.py`).
 - `signaling.py` — WebRTC signaling at `WS /ws/call/{group_id}`. Rooms are **in-memory** (`group_id -> {user_id: Participant}`); the joining client receives the peer list and creates an offer toward each existing peer (avoids glare); the server only relays offer/answer/ice-candidate to `target`. Media is P2P mesh with Google STUN (no TURN yet).
-- Uploads go to `backend/uploads/` (avatars served via StaticFiles mount at `/api/avatars`, chat files by uuid names).
+- File storage (avatars + chat attachments) goes through `storage.py`: `STORAGE_BACKEND=local` (default, `backend/uploads/`) or `s3` (private bucket; serving endpoints respond with 307 redirects to presigned URLs). DB always stores the same relative URLs (`/api/avatars/…`, `/api/files/…`) regardless of backend — never store absolute/presigned URLs. Avatars are served by `users.avatars_router`, chat files by `chat.files_router` (no auth; unguessable uuid names are the security model).
 
 ### Frontend (`frontend/`)
 

@@ -2,19 +2,19 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from . import models  # noqa: F401 — registra los modelos en Base.metadata
 from . import signaling
-from .config import AVATAR_DIR, CHAT_DIR, CORS_ORIGINS
+from .config import AVATAR_DIR, CHAT_DIR, CORS_ORIGINS, STORAGE_BACKEND
 from .database import Base, SessionLocal, engine
 from .migrate import run_light_migrations
 from .routers import auth, chat, github, groups, tasks, users
 from .seed import seed
 
 
-AVATAR_DIR.mkdir(parents=True, exist_ok=True)
-CHAT_DIR.mkdir(parents=True, exist_ok=True)
+if STORAGE_BACKEND == "local":
+    AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+    CHAT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @asynccontextmanager
@@ -44,8 +44,8 @@ app.include_router(groups.router)
 app.include_router(tasks.router)
 app.include_router(chat.router)
 app.include_router(chat.files_router)
+app.include_router(users.avatars_router)
 app.include_router(signaling.router)
-app.mount("/api/avatars", StaticFiles(directory=AVATAR_DIR), name="avatars")
 
 
 @app.get("/api/health")

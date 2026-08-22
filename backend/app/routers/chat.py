@@ -8,14 +8,14 @@ import re
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models, schemas
 from ..auth import get_current_user
-from ..config import CHAT_DIR, MAX_CHAT_FILE_BYTES
+from ..config import MAX_CHAT_FILE_BYTES
 from ..database import get_db
+from ..storage import storage
 from ..signaling import _broadcast
 
 router = APIRouter(prefix="/api/groups", tags=["chat"])
@@ -88,7 +88,7 @@ async def create_message(
         if (
             not attachment.url.startswith("/api/files/")
             or not _FILENAME_RE.match(filename)
-            or not (CHAT_DIR / filename).is_file()
+            or not storage.exists("chat", filename)
         ):
             raise HTTPException(status_code=422, detail="Adjunto inválido")
 
@@ -157,8 +157,7 @@ def upload_attachment(
     # Nombre uuid no adivinable; si nadie referencia el adjunto en un mensaje
     # queda huérfano en disco (limitación aceptada).
     filename = f"{uuid.uuid4().hex}{suffix}"
-    CHAT_DIR.mkdir(parents=True, exist_ok=True)
-    (CHAT_DIR / filename).write_bytes(data)
+    storage.save("chat", filename, data, file.content_type or "application/octet-stream")
 
     return schemas.ChatUploadOut(
         name=original,
@@ -176,12 +175,12 @@ def get_file(filename: str, name: str | None = None):
     # ignora cross-origin, así que el nombre tiene que venir del servidor).
     if not _FILENAME_RE.match(filename):
         raise HTTPException(status_code=404, detail="No encontrado")
-    path = CHAT_DIR / filename
-    if not path.is_file():
+    if not storage.exists("chat", filename):
         raise HTTPException(status_code=404, detail="No encontrado")
     download_name = re.sub(r"[\\/\r\n\"';]", "_", name).strip()[:255] if name else filename
-    return FileResponse(
-        path,
-        filename=download_name or filename,
-        content_disposition_type="attachment",
+    return storage.response(
+        "chat",
+        filename,
+        download_name=download_name or filename,
+        disposition="attachment",
     )

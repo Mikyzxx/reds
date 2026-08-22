@@ -1,4 +1,5 @@
 import io
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -8,12 +9,18 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..auth import get_current_user
-from ..config import ALLOWED_AVATAR_TYPES, AVATAR_DIR, MAX_AVATAR_BYTES
+from ..config import ALLOWED_AVATAR_TYPES, MAX_AVATAR_BYTES
 from ..database import get_db
+from ..storage import storage
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
+# Servido de avatares (sin prefijo; reemplaza al antiguo mount de StaticFiles
+# para que local y s3 pasen por el mismo código)
+avatars_router = APIRouter(tags=["users"])
+
 AVATAR_MAX_DIMENSION = 512
+_AVATAR_FILENAME_RE = re.compile(r"^[0-9a-f]{32}\.jpg$")
 
 
 @router.get("", response_model=list[schemas.UserOut])
@@ -28,9 +35,16 @@ def _delete_avatar_file(avatar_url: str | None) -> None:
     if not avatar_url:
         return
     filename = avatar_url.rsplit("/", 1)[-1]
-    path = AVATAR_DIR / filename
-    if path.is_file():
-        path.unlink(missing_ok=True)
+    if _AVATAR_FILENAME_RE.match(filename):
+        storage.delete("avatars", filename)
+
+
+@avatars_router.get("/api/avatars/{filename}")
+def get_avatar(filename: str):
+    # Sin auth e inline, como el mount de StaticFiles al que sustituye
+    if not _AVATAR_FILENAME_RE.match(filename) or not storage.exists("avatars", filename):
+        raise HTTPException(status_code=404, detail="No encontrado")
+    return storage.response("avatars", filename, disposition="inline")
 
 
 @router.post("/me/avatar", response_model=schemas.UserOut)
@@ -64,9 +78,10 @@ def upload_avatar(
 
     image.thumbnail((AVATAR_MAX_DIMENSION, AVATAR_MAX_DIMENSION))
 
-    AVATAR_DIR.mkdir(parents=True, exist_ok=True)
     filename = f"{uuid.uuid4().hex}.jpg"
-    image.save(AVATAR_DIR / filename, format="JPEG", quality=85)
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=85)
+    storage.save("avatars", filename, buffer.getvalue(), "image/jpeg")
 
     _delete_avatar_file(user.avatar_url)
     user.avatar_url = f"/api/avatars/{filename}"
